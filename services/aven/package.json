@@ -1,0 +1,15 @@
+{
+	"name": "@MaiaOS/aven",
+	"version": "26.4.212041-next",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun run --env-file=../../.env src/index.js",
+		"start": "bun run --env-file=../../.env src/index.js",
+		"test": "bun test tests"
+	},
+	"dependencies": {
+		"@MaiaOS/logs": "workspace:*",
+		"@MaiaOS/mail": "workspace:*"
+	}
+}

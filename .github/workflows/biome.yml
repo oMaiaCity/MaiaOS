@@ -28,6 +28,9 @@ jobs:
       - name: Run Biome
         run: bun run check:ci
 
+      - name: Test @MaiaOS/aven
+        run: bun --filter @MaiaOS/aven test
+
   build:
     if: (github.event_name != 'push' || github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')) && (github.event_name != 'push' || github.ref != 'refs/heads/main')
     name: Build (app + sync)
@@ -59,6 +62,8 @@ jobs:
 
       - name: Build landing (Docker)
         run: docker build -f services/landing/Dockerfile -t landing-build . 2>&1 | tail -30
+
+      # Aven: image is built on Fly (remote builder); no local/GitHub Docker for this app.
 
   build-landing-main:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] '))

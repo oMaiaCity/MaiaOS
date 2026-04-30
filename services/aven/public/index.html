@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Aven inbox</title>
+	<style>
+		* { box-sizing: border-box; }
+		body {
+			font-family: system-ui, sans-serif;
+			margin: 0;
+			height: 100vh;
+			display: flex;
+			flex-direction: column;
+			color: #1a1a1a;
+		}
+		header {
+			padding: 0.75rem 1rem;
+			border-bottom: 1px solid #ddd;
+			background: #fafafa;
+		}
+		header h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
+		main {
+			flex: 1;
+			display: grid;
+			grid-template-columns: minmax(240px, 320px) 1fr;
+			min-height: 0;
+		}
+		aside {
+			border-right: 1px solid #ddd;
+			overflow: auto;
+			background: #fff;
+		}
+		aside ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+		aside li button {
+			display: block;
+			width: 100%;
+			text-align: left;
+			padding: 0.65rem 0.85rem;
+			border: none;
+			border-bottom: 1px solid #eee;
+			background: none;
+			cursor: pointer;
+			font: inherit;
+			color: inherit;
+		}
+		aside li button:hover { background: #f5f5f5; }
+		aside li button.selected { background: #e8f0fe; }
+		aside .subj { font-weight: 600; display: block; margin-bottom: 0.2rem; }
+		aside .meta { font-size: 0.75rem; color: #666; }
+		.detail {
+			overflow: auto;
+			padding: 1rem 1.25rem;
+			min-height: 0;
+		}
+		.detail h2 { font-size: 1rem; margin: 0 0 0.35rem; }
+		.detail .from { color: #555; font-size: 0.85rem; margin-bottom: 1rem; }
+		.detail .body-label {
+			font-size: 0.75rem;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: #666;
+			margin: 0 0 0.35rem;
+		}
+		.detail pre.body {
+			white-space: pre-wrap;
+			word-break: break-word;
+			font-family: ui-monospace, monospace;
+			font-size: 0.85rem;
+			line-height: 1.45;
+			margin: 0 0 1.25rem;
+			padding: 0.75rem;
+			background: #f8f8f8;
+			border-radius: 6px;
+			border: 1px solid #eaeaea;
+		}
+		.detail .attach-label {
+			font-size: 0.75rem;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: #666;
+			margin: 0 0 0.35rem;
+		}
+		.detail .pdf-frame {
+			width: 100%;
+			min-height: 480px;
+			border: 1px solid #ddd;
+			border-radius: 6px;
+			background: #f0f0f0;
+		}
+		.detail .text-frame {
+			width: 100%;
+			min-height: 180px;
+			border: 1px solid #ddd;
+			border-radius: 6px;
+			background: #fafafa;
+		}
+		.empty-hint {
+			color: #888;
+			padding: 2rem;
+			text-align: center;
+		}
+	</style>
+</head>
+<body>
+	<header><h1>Inbound mail</h1></header>
+	<main>
+		<aside aria-label="Message list">
+			<ul id="list"><li class="empty-hint">Loading…</li></ul>
+		</aside>
+		<section class="detail" id="detail" aria-label="Message">
+			<p class="empty-hint" id="placeholder">Select a message</p>
+		</section>
+	</main>
+	<script>
+		function escapeHtml(s) {
+			const d = document.createElement("div");
+			d.textContent = s;
+			return d.innerHTML;
+		}
+
+		const listEl = document.getElementById("list");
+		const detailEl = document.getElementById("detail");
+		const placeholder = document.getElementById("placeholder");
+
+		/** @type {{ id: string }[]} */
+		let rows = [];
+
+		function renderDetail(data) {
+			placeholder?.remove();
+			const atts = data.attachments ?? [];
+			const attSrc = (index) =>
+				`/api/inbox/${encodeURIComponent(data.id)}/attachment/${index}`;
+			const iframePdf = atts.filter((a) => a.inlinePdf === true);
+			const iframeText = atts.filter(
+				(a) =>
+					!a.inlinePdf &&
+					/^text\/plain/i.test(String(a.contentType ?? "")),
+			);
+			const previewIdx = new Set(
+				[...iframePdf, ...iframeText].map((a) => a.index),
+			);
+			const otherAtts = atts.filter((a) => !previewIdx.has(a.index));
+			const pdfBlock = iframePdf
+				.map((a) => {
+					const title = escapeHtml(a.filename || "PDF");
+					const src = attSrc(a.index);
+					return `<p class="attach-label">PDF · ${title}</p><iframe class="pdf-frame" title="${title}" src="${src}"></iframe>`;
+				})
+				.join("");
+			const textBlock = iframeText
+				.map((a) => {
+					const title = escapeHtml(a.filename || "attachment");
+					const src = attSrc(a.index);
+					return `<p class="attach-label">Text · ${title}</p><iframe class="text-frame" title="${title}" src="${src}"></iframe>`;
+				})
+				.join("");
+			const otherBlock =
+				otherAtts.length === 0
+					? ""
+					: `<p class="attach-label">Other attachments</p><ul>${otherAtts
+							.map(
+								(a) =>
+									`<li><a href="${attSrc(a.index)}">${escapeHtml(a.filename)}</a> (${escapeHtml(a.contentType)})</li>`,
+							)
+							.join("")}</ul>`;
+
+			detailEl.innerHTML = `
+				<h2>${escapeHtml(data.subject ?? "")}</h2>
+				<div class="from">${escapeHtml(data.from ?? "")} · ${escapeHtml(new Date(data.receivedAt).toISOString())}</div>
+				<p class="body-label">Body</p>
+				<pre class="body">${escapeHtml(data.bodyText ?? "")}</pre>
+				${pdfBlock}${textBlock}
+				${otherBlock}
+			`;
+		}
+
+		function selectRow(id) {
+			for (const btn of listEl.querySelectorAll("button")) {
+				btn.classList.toggle("selected", btn.dataset.id === id);
+			}
+			fetch(`/api/inbox/${encodeURIComponent(id)}`)
+				.then((r) => {
+					if (!r.ok) throw new Error(`${r.status}`);
+					return r.json();
+				})
+				.then(renderDetail)
+				.catch((e) => {
+					detailEl.innerHTML = `<p class="empty-hint">${escapeHtml(String(e))}</p>`;
+				});
+		}
+
+		fetch("/api/inbox")
+			.then((r) => {
+				if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+				return r.json();
+			})
+			.then((data) => {
+				rows = data;
+				listEl.replaceChildren();
+				if (!rows.length) {
+					listEl.innerHTML = "<li class=\"empty-hint\">(empty)</li>";
+					return;
+				}
+				for (const m of rows) {
+					const li = document.createElement("li");
+					const btn = document.createElement("button");
+					btn.type = "button";
+					btn.dataset.id = m.id;
+					const atts = Array.isArray(m.attachments) ? m.attachments : [];
+					const attHint =
+						atts.length === 0 ? "" : ` · ${atts.length} attachment(s)`;
+					btn.innerHTML = `<span class="subj">${escapeHtml(m.subject ?? "")}</span><span class="meta">${escapeHtml(m.from ?? "")}${attHint}</span>`;
+					btn.addEventListener("click", () => selectRow(m.id));
+					li.appendChild(btn);
+					listEl.appendChild(li);
+				}
+				if (rows[0]) selectRow(rows[0].id);
+			})
+			.catch((e) => {
+				listEl.innerHTML = `<li class="empty-hint">${escapeHtml(String(e))}</li>`;
+			});
+	</script>
+</body>
+</html>

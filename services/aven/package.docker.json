@@ -1,0 +1,5 @@
+{
+	"name": "maia-aven-fly",
+	"private": true,
+	"workspaces": ["services/aven", "libs/maia-mail", "libs/maia-logs"]
+}

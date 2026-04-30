@@ -1,0 +1,47 @@
+# Replaces root .dockerignore for this image only (fly.toml [build] ignorefile).
+# Keeps: @MaiaOS/aven, @MaiaOS/mail, @MaiaOS/logs — nothing else from the monorepo.
+
+.git
+.github
+.cursor
+.husky
+.vscode
+node_modules
+**/.env
+**/.env.*
+*.md
+.editorconfig
+.gitattributes
+biome.jsonc
+agent-transcripts
+
+# Root workspace / lock — Aven image uses package.docker.json + fresh install
+/package.json
+/bun.lockb
+/bun.lock
+/jsconfig.json
+
+services/app
+services/sync
+services/moai
+services/landing
+scripts
+
+libs/maia-brand
+libs/maia-db
+libs/maia-distros
+libs/maia-flows
+libs/maia-game
+libs/maia-peer
+libs/maia-runtime
+libs/maia-seed
+libs/maia-self
+libs/maia-storage
+libs/maia-ucan
+libs/maia-universe
+libs/maia-validation
+libs/FUTURE
+
+services/aven/tests
+libs/maia-mail/tests
+libs/maia-logs/tests

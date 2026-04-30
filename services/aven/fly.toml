@@ -1,0 +1,62 @@
+# Single machine only: deploy uses --ha=false; deploy.sh runs fly scale count 1 (SMTP + one in-memory mailbox).
+# Dedicated IPv4 recommended for inbound SMTP (raw TCP). Allocate: fly ips allocate-v4
+# HTTPS: https://mail-next-maia-city.fly.dev (Fly uses .fly.dev, not .fly.app)
+# Optional: AVEN_ALLOWED_RCPTS, AVEN_WHITELISTED_MAILS (@domain = domain + subdomains; user@dom = exact envelope; comma-separated). @gmail.com / @googlemail.com mirror; exact Gmail entries also match dotted local-parts and +tags (consumer semantics). Punycode IDN domains in the env are normalized to Unicode to match smtp-server.
+# AVEN_SMTP_MAX_CLIENTS, AVEN_SMTP_SOCKET_TIMEOUT_MS,
+# AVEN_SMTP_MAX_CONCURRENT_PER_IP, AVEN_SMTP_MAX_MAIL_FROM_PER_IP_PER_WINDOW, AVEN_SMTP_RATE_WINDOW_MS, AVEN_MAX_MESSAGE_BYTES
+app = "mail-next-maia-city"
+org = "maia-city"
+primary_region = "fra"
+
+[build]
+# Paths are relative to this fly.toml (services/aven/), not the repo root.
+dockerfile = "Dockerfile"
+ignorefile = ".dockerignore"
+
+[env]
+PORT = "8080"
+AVEN_HTTP_PORT = "8080"
+AVEN_SMTP_PORT = "2525"
+NODE_ENV = "production"
+
+[[services]]
+internal_port = 8080
+protocol = "tcp"
+processes = ["app"]
+
+[services.concurrency]
+type = "connections"
+hard_limit = 250
+soft_limit = 200
+
+[[services.ports]]
+handlers = ["http"]
+port = 80
+force_https = true
+
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443
+
+[[services.http_checks]]
+interval = "15s"
+timeout = "5s"
+grace_period = "30s"
+method = "GET"
+path = "/health"
+protocol = "http"
+tls_skip_verify = false
+
+# Inbound SMTP: map public 25 → process port AVEN_SMTP_PORT (2525 in container).
+[[services]]
+internal_port = 2525
+protocol = "tcp"
+processes = ["app"]
+
+[services.concurrency]
+type = "connections"
+hard_limit = 1000
+soft_limit = 500
+
+[[services.ports]]
+port = 25

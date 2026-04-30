@@ -3,6 +3,7 @@
 	"private": true,
 	"workspaces": [
 		"services/app",
+		"services/aven",
 		"services/sync",
 		"services/moai",
 		"libs/*"
@@ -14,6 +15,7 @@
 		"maia:sync": "bun services/moai/sync-maia-venv.js",
 		"dev:app": "bun scripts/dev-app.js",
 		"dev:sync": "bun scripts/dev-sync.js",
+		"dev:aven": "bun --filter @MaiaOS/aven dev",
 		"dev:desktop": "bun scripts/dev-desktop.js",
 		"build:desktop": "cd services/app && bun run build && bun run tauri:build && ditto \"src-tauri/target/release/bundle/macos/Maia City.app\" \"/Applications/Maia City.app\" && open \"/Applications/Maia City.app\"",
 		"build:desktop:debug": "cd services/app && bun run build && bun run tauri:build:debug && ditto \"src-tauri/target/debug/bundle/macos/Maia City.app\" \"/Applications/Maia City.app\" && open \"/Applications/Maia City.app\"",
@@ -21,6 +23,7 @@
 		"deploy:app": "cd services/app && ./deploy.sh",
 		"deploy:app:verify": "bun scripts/fly-build-args-verify.js",
 		"deploy:sync": "cd services/sync && ./deploy.sh",
+		"deploy:aven": "cd services/aven && ./deploy.sh",
 		"deploy:landing": "flyctl deploy --dockerfile services/landing/Dockerfile --config services/landing/fly.toml --app maia-city --wait-timeout 300 && flyctl scale count 1 --app maia-city --yes",
 		"universe:build": "cd libs/maia-universe && bun run build",
 		"distros:build": "cd libs/maia-distros && bun run build",
