@@ -42,6 +42,10 @@
 		"universe:registry:watch": "bun scripts/generate-maia-universe-registry.mjs --watch",
 		"test": "bun run --workspaces --if-present test",
 		"test:db-contract": "bun --filter @MaiaOS/db test",
+		"sentrux:gui": "sentrux scan .",
+		"hyperframes:golden:lint": "cd experiments/hyperframes-golden-spiral && bunx hyperframes lint",
+		"hyperframes:golden:preview": "cd experiments/hyperframes-golden-spiral && bunx hyperframes preview",
+		"hyperframes:golden:render": "cd experiments/hyperframes-golden-spiral && bunx hyperframes render",
 		"prepare": "husky"
 	},
 	"devDependencies": {
