@@ -2,9 +2,9 @@
  * Validation Helper - Initializes validation engine with all schemas
  */
 
-import { normalizeCoValueData } from '@MaiaOS/db'
 import { FACTORY_REGISTRY } from './data/builtin-schemas.data.js'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
+import { normalizeCoValueData } from './normalize-covalue-data.js'
 import {
 	formatValidationErrors,
 	handleValidationResult,
@@ -25,46 +25,41 @@ let validationEngine = null
 let pendingSchemaResolver = null // Store resolver if set before engine initialization
 
 /**
- * Set schema resolver for dynamic $schema reference resolution
- * @param {Object} options - Options object
- * @param {Object} options.dataEngine - DataEngine instance (REQUIRED - uses operations API)
+ * Set schema resolver for dynamic $schema reference resolution (factory co-ids on peer).
+ * @param {Object} options
+ * @param {Function} options.resolveFactory - async (factoryKey) => factory schema (caller wires @MaiaOS/db)
  */
 /**
  * Load metaschema into AJV from the peer metaschema CoValue (runtime source of truth).
  * @param {import('@MaiaOS/db').MaiaDB} peer
+ * @param {{ resolveFactoryDefFromPeer: (peer: object, factoryKey: string, options?: object) => Promise<object> }} deps
  */
-export async function hydrateValidationMetaFromPeer(peer) {
+export async function hydrateValidationMetaFromPeer(peer, deps) {
+	if (!deps || typeof deps.resolveFactoryDefFromPeer !== 'function') {
+		throw new Error(
+			'[hydrateValidationMetaFromPeer] deps.resolveFactoryDefFromPeer is REQUIRED (from @MaiaOS/db authoring-resolver)',
+		)
+	}
 	const engine = await getValidationEngine()
-	await engine.hydrateMetaFromPeer(peer)
+	await engine.hydrateMetaFromPeer(peer, deps)
 }
 
 export function setFactoryResolver(options) {
 	if (!options || typeof options !== 'object') {
-		throw new Error('[setFactoryResolver] Options object required: { dataEngine }')
+		throw new Error('[setFactoryResolver] Options object required: { resolveFactory }')
 	}
 
-	const { dataEngine } = options
+	const { resolveFactory } = options
 
-	if (!dataEngine) {
-		throw new Error('[setFactoryResolver] dataEngine is REQUIRED. No fallbacks allowed.')
+	if (typeof resolveFactory !== 'function') {
+		throw new Error(
+			'[setFactoryResolver] resolveFactory is REQUIRED (async factoryKey => schema). No fallbacks allowed.',
+		)
 	}
 
-	// Strict runtime: factory co-ids are co_z; resolveFactoryDefFromPeer(peer, key) (see resolve in @MaiaOS/db)
-	const operationsResolver = async (factoryKey) => {
-		try {
-			if (!dataEngine.peer) {
-				throw new Error('[SchemaResolver] dataEngine.peer is required')
-			}
-			const { resolveFactoryDefFromPeer } = await import('@MaiaOS/db')
-			return await resolveFactoryDefFromPeer(dataEngine.peer, factoryKey, { returnType: 'factory' })
-		} catch (error) {
-			throw new Error(`[SchemaResolver] Failed to load factory ${factoryKey}: ${error.message}`)
-		}
-	}
-
-	pendingSchemaResolver = operationsResolver
+	pendingSchemaResolver = resolveFactory
 	if (validationEngine) {
-		validationEngine.setFactoryResolver(operationsResolver)
+		validationEngine.setFactoryResolver(resolveFactory)
 	}
 }
 
@@ -207,14 +202,12 @@ export async function validateAgainstFactoryOrThrow(schema, data, context = '') 
  * @param {any} data - Data to validate
  * @param {string} context - Context for error messages (e.g., 'createCoMap')
  * @param {Object} [options] - Options object
- * @param {Object} [options.dataEngine] - DataEngine (REQUIRED for co-id schemas)
+ * @param {Function} [options.resolve] - (backend, factoryRef, opts) => Promise (REQUIRED when factoryRef is co_z; from @MaiaOS/db authoring `resolve`)
  * @throws {Error} If schema not found or validation fails
  * @returns {Promise<Object>} Loaded factory definition (runtime or inline schema object)
  */
 export async function loadFactoryAndValidate(backend, factoryRef, data, context, options = {}) {
-	const { dataEngine } = options
-
-	const { resolve } = await import('@MaiaOS/db')
+	const { dataEngine, resolve } = options
 
 	const dataForValidation = stripIdentityMeta(data)
 
@@ -222,6 +215,11 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 		if (!dataEngine) {
 			throw new Error(
 				`[${context}] dataEngine is REQUIRED for co-id schema validation. Schema: ${factoryRef}. Pass dataEngine in options.`,
+			)
+		}
+		if (typeof resolve !== 'function') {
+			throw new Error(
+				`[${context}] resolve is REQUIRED for co-id schema validation. Pass MaiaDB authoring resolve in options.`,
 			)
 		}
 

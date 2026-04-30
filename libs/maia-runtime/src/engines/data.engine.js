@@ -11,6 +11,7 @@ import {
 	getSparkOsId,
 	loadInfraFromSparkOs,
 	normalizeCoValueData,
+	resolveFactoryDefFromPeer,
 } from '@MaiaOS/db'
 import { debugLog, debugWarn, traceDataCreate } from '@MaiaOS/logs'
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver'
@@ -1067,7 +1068,7 @@ export class DataEngine {
 			const cob = peer.infra?.cobinary
 			if (cob) this.cobinaryFactoryCoId = cob
 			const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
-			await hydrateValidationMetaFromPeer(peer)
+			await hydrateValidationMetaFromPeer(peer, { resolveFactoryDefFromPeer })
 		})().finally(() => {
 			if (this._rsfInflightKey === key) {
 				this._rsfInflight = null

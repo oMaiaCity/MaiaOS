@@ -28,6 +28,15 @@ jobs:
       - name: Run Biome
         run: bun run check:ci
 
+      - name: Install Sentrux (Linux x86_64)
+        run: |
+          curl -fsSL -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/download/v0.5.7/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Sentrux architectural rules
+        run: sentrux check .
+
       - name: Test @MaiaOS/aven
         run: bun --filter @MaiaOS/aven test
 

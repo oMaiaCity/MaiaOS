@@ -18,13 +18,6 @@ afterEach(() => {
  * Each test provides its own MockLocalNode (varies by scenario).
  */
 function mockCojsonModules(MockLocalNode) {
-	mock.module('@MaiaOS/db/profile-bootstrap', () => ({
-		ensureProfileForNewAccount: async (account, _node) => {
-			ensureProfileCalls++
-			account.set('profile', 'co_zprof_recovery')
-		},
-	}))
-
 	mock.module('cojson', () => ({
 		...realCojson,
 		LocalNode: MockLocalNode,
@@ -98,12 +91,18 @@ describe('loadAccount — catch-branch flows (post-unified-bootstrap)', () => {
 
 		const { loadAccount } = await import('../src/coID.js')
 
+		const ensureProfile = async (account, _node) => {
+			ensureProfileCalls++
+			account.set('profile', 'co_zprof_recovery')
+		}
+
 		const { node, account } = await loadAccount({
 			accountID: 'co_zacc_test',
 			agentSecret: {},
 			peers: [],
 			storage: undefined,
 			migration: undefined,
+			ensureProfileForNewAccount: ensureProfile,
 		})
 
 		expect(ensureProfileCalls).toBeGreaterThanOrEqual(1)

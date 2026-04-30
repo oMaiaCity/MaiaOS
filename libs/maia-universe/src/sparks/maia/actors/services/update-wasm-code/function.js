@@ -5,8 +5,8 @@
  * Supports UPDATE_WASM_CODE (persist) and GET_WASM_CODE (read live code).
  */
 
+import { readStore } from '@MaiaOS/db/resolve-helpers'
 import { createLogger } from '@MaiaOS/logs'
-import { readStore } from '@MaiaOS/runtime/utils/resolve-helpers.js'
 import {
 	createErrorEntry,
 	createErrorResult,

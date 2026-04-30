@@ -16,8 +16,7 @@
 
 import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
-import { ensureCoValueLoaded } from './collection-helpers.js'
-import { read as universalRead } from './read.js'
+import { ensureCoValueLoaded } from './ensure-covalue-core.js'
 
 export { waitForReactiveResolution } from './read-operations.js'
 
@@ -136,14 +135,23 @@ export function resolveQueryReactive(peer, queryDef, options = {}) {
 			return
 		}
 
-		// Factory resolved - execute query
+		if (typeof peer.read !== 'function') {
+			store._set({
+				loading: false,
+				items: [],
+				error: '[resolveQueryReactive] peer.read is required (MaiaDB / data engine peer)',
+			})
+			factoryUnsubscribe()
+			return
+		}
+
+		// Use peer.read — avoids `import('./read.js')` (Sentrux cycle with authoring-resolver).
 		try {
-			const queryStore = await universalRead(
-				peer,
-				null,
+			const queryStore = await peer.read(
 				factoryState.factoryCoId,
-				queryDef.filter || null,
 				null,
+				null,
+				queryDef.filter || null,
 				{
 					...options,
 					...(queryDef.options || {}),

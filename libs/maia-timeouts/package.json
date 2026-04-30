@@ -1,0 +1,10 @@
+{
+	"name": "@MaiaOS/timeouts",
+	"version": "26.4.212041-next",
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"description": "Shared sync/bootstrap timeout constants for @MaiaOS/peer and @MaiaOS/db"
+}

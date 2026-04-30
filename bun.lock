@@ -23,6 +23,7 @@
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/seed": "workspace:*",
+        "@MaiaOS/timeouts": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
         "cojson": "0.20.16",
       },
@@ -74,9 +75,9 @@
       "name": "@MaiaOS/peer",
       "version": "26.4.212041-next",
       "dependencies": {
-        "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
+        "@MaiaOS/timeouts": "workspace:*",
         "cojson": "0.20.16",
         "cojson-transport-ws": "0.20.16",
       },
@@ -137,6 +138,10 @@
         "cojson-storage-indexeddb": "0.20.16",
       },
     },
+    "libs/maia-timeouts": {
+      "name": "@MaiaOS/timeouts",
+      "version": "26.4.212041-next",
+    },
     "libs/maia-ucan": {
       "name": "@MaiaOS/maia-ucan",
       "version": "26.4.212041-next",
@@ -153,7 +158,6 @@
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
-        "@MaiaOS/runtime": "workspace:*",
         "@noble/hashes": "2.2.0",
         "unicode-segmenter": "0.15.0",
       },
@@ -162,7 +166,6 @@
       "name": "@MaiaOS/validation",
       "version": "26.4.212041-next",
       "dependencies": {
-        "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
         "ajv": "8.17.1",
@@ -247,6 +250,8 @@
     "@MaiaOS/storage": ["@MaiaOS/storage@workspace:libs/maia-storage"],
 
     "@MaiaOS/sync": ["@MaiaOS/sync@workspace:services/sync"],
+
+    "@MaiaOS/timeouts": ["@MaiaOS/timeouts@workspace:libs/maia-timeouts"],
 
     "@MaiaOS/universe": ["@MaiaOS/universe@workspace:libs/maia-universe"],
 

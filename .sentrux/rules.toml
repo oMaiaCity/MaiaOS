@@ -1,0 +1,52 @@
+# MaiaOS — Sentrux rules. Run: sentrux check .
+
+[constraints]
+# `reactive-resolver` no longer imports `read.js`; indexing uses `ensure-covalue-core` (not read) for warm-load.
+# Remaining SCC: `read` ↔ `authoring-resolver` (`readLazy` / `resolveSchemaLazy`) ↔ bootstrap chain through
+# `collection-helpers` → `factory-index-manager` → `create-covalue-for-spark` → cotypes → dynamic authoring.
+# Eliminating it requires narrowing `resolve()` off universal `read()` without changing semantics — tracked for a follow-up.
+max_cycles = 1
+max_coupling = "F"
+no_god_files = false
+
+[[layers]]
+name = "foundation"
+paths = [
+	"libs/maia-timeouts/*",
+	"libs/maia-db/*",
+	"libs/maia-logs/*",
+	"libs/maia-validation/*",
+	"libs/maia-peer/*",
+]
+order = 0
+
+[[layers]]
+name = "universe_seed"
+paths = ["libs/maia-universe/*", "libs/maia-seed/*"]
+order = 1
+
+[[layers]]
+name = "runtime_stack"
+paths = ["libs/maia-runtime/*", "libs/maia-distros/*", "libs/maia-flows/*"]
+order = 2
+
+[[layers]]
+name = "product_libs"
+paths = [
+	"libs/maia-game/*",
+	"libs/maia-mail/*",
+	"libs/maia-storage/*",
+	"libs/maia-ucan/*",
+	"libs/maia-brand/*",
+]
+order = 3
+
+[[layers]]
+name = "services"
+paths = ["services/*/*"]
+order = 4
+
+[[boundaries]]
+from = "libs/*/*"
+to = "services/*/*"
+reason = "Libraries must not depend on service packages"

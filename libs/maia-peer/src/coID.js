@@ -16,6 +16,7 @@ const opsPeer = createOpsLogger('peer')
  * CoJSON `LocalNode.withLoadedAccount` throws "Account has no profile" before `migration` runs.
  * Recover by constructing a {@link LocalNode}, loading the account, then {@link ensureProfileForNewAccount}.
  * @param {object} p
+ * @param {Function} [p.ensureProfileForNewAccount] - required when the account has no `profile` field
  * @returns {Promise<import('cojson').LocalNode>}
  */
 export async function recoverAccountWithMissingProfile({
@@ -25,6 +26,7 @@ export async function recoverAccountWithMissingProfile({
 	finalStorage,
 	crypto,
 	migration,
+	ensureProfileForNewAccount,
 	originalError,
 }) {
 	const node = new LocalNode(agentSecret, crypto.newRandomSessionID(accountID), crypto)
@@ -34,8 +36,12 @@ export async function recoverAccountWithMissingProfile({
 	if (account === 'unavailable') {
 		throw originalError
 	}
-	const { ensureProfileForNewAccount } = await import('@MaiaOS/db/profile-bootstrap')
 	if (!account.get('profile')) {
+		if (typeof ensureProfileForNewAccount !== 'function') {
+			throw new Error(
+				'ensureProfileForNewAccount is required when recovering an account that has no profile field',
+			)
+		}
 		await ensureProfileForNewAccount(account, node, {})
 	}
 	if (migration) await migration(account, node)
@@ -63,11 +69,19 @@ export async function recoverAccountWithMissingProfile({
  * @param {Array} [options.peers] - Sync peers array (optional, defaults to empty array)
  * @param {Object} [options.storage] - Storage instance (optional, defaults to undefined)
  * @param {Function} [options.migration] - (account, node, creationProps) => Promise<void> - idempotent migration
- * @param {Function} [options.seed] - (account, node) => Promise<void> - post-creation seed (e.g. simpleAccountSeed)
+ * @param {Function} [options.ensureProfileForNewAccount] - creates Profile CoMap when migration leaves `profile` unset (from @MaiaOS/db)
  * @returns {Promise<{node, account, accountID, profile, group}>}
  */
 export async function createAccountWithSecret(options) {
-	const { agentSecret, name, peers = [], storage, migration = undefined, seed = undefined } = options
+	const {
+		agentSecret,
+		name,
+		peers = [],
+		storage,
+		migration = undefined,
+		seed = undefined,
+		ensureProfileForNewAccount = undefined,
+	} = options
 
 	if (!agentSecret) {
 		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
@@ -85,7 +99,11 @@ export async function createAccountWithSecret(options) {
 	const wrappedMigration = async (account, node, creationProps) => {
 		if (migration) await migration(account, node, creationProps)
 		if (!account.get('profile')) {
-			const { ensureProfileForNewAccount } = await import('@MaiaOS/db/profile-bootstrap')
+			if (typeof ensureProfileForNewAccount !== 'function') {
+				throw new Error(
+					'ensureProfileForNewAccount is required when migration does not set account profile',
+				)
+			}
 			await ensureProfileForNewAccount(account, node, creationProps)
 		}
 	}
@@ -135,10 +153,18 @@ export async function createAccountWithSecret(options) {
  * @param {Array} [options.peers] - Sync peers array (optional, defaults to empty array)
  * @param {Object} [options.storage] - Storage instance (optional, defaults to undefined)
  * @param {Function} [options.migration] - (account, node) => Promise<void> - idempotent migration on load
+ * @param {Function} [options.ensureProfileForNewAccount] - runs after migration if `profile` still missing; required for recovery when CoJSON throws before migration (from @MaiaOS/db)
  * @returns {Promise<{node, account, accountID}>}
  */
 export async function loadAccount(options) {
-	const { accountID, agentSecret, peers = [], storage, migration = undefined } = options
+	const {
+		accountID,
+		agentSecret,
+		peers = [],
+		storage,
+		migration = undefined,
+		ensureProfileForNewAccount = undefined,
+	} = options
 
 	if (!agentSecret) {
 		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
@@ -182,7 +208,11 @@ export async function loadAccount(options) {
 	const deferredMigration = async (account, node) => {
 		if (migration) await migration(account, node)
 		if (!account.get('profile')) {
-			const { ensureProfileForNewAccount } = await import('@MaiaOS/db/profile-bootstrap')
+			if (typeof ensureProfileForNewAccount !== 'function') {
+				throw new Error(
+					'ensureProfileForNewAccount is required when account has no profile after migration',
+				)
+			}
 			await ensureProfileForNewAccount(account, node, {})
 		}
 	}
@@ -227,6 +257,7 @@ export async function loadAccount(options) {
 				finalStorage,
 				crypto,
 				migration: deferredMigration,
+				ensureProfileForNewAccount,
 				originalError: error,
 			})
 		}

@@ -12,7 +12,6 @@ import { createLogger, perfDbRead } from '@MaiaOS/logs'
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver.js'
 import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
-import { resolve as resolveSchema } from '../factory/authoring-resolver.js'
 import { getSparksRegistryId } from '../groups/groups.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
@@ -26,6 +25,11 @@ import { applyMapTransform } from './map-transform.js'
 import { waitForStoreReady } from './read-operations.js'
 
 const log = createLogger('maia-db')
+
+async function resolveSchemaLazy(peer, identifier, options) {
+	const { resolve } = await import('../factory/authoring-resolver.js')
+	return resolve(peer, identifier, options)
+}
 
 function debugLog(...args) {
 	if (typeof process !== 'undefined' && process.env?.DEBUG) log.debug(...args)
@@ -81,7 +85,7 @@ export async function read(
 	if (schema) {
 		// Sparks: read from account.sparks (index only has user-created sparks)
 		const sparkSchemaCoId = peer.infra?.dataSpark
-		const resolvedSchema = await resolveSchema(peer, schema, { returnType: 'coId' })
+		const resolvedSchema = await resolveSchemaLazy(peer, schema, { returnType: 'coId' })
 		if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
 			return readSparksFromAccount(peer, readOptions)
 		}
@@ -458,7 +462,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 					// Runtime: resolve human-readable schema refs to co-id (seed should transform; resolve handles edge cases)
 					if (!factoryCoId.startsWith('co_z')) {
 						try {
-							const resolved = await resolveSchema(peer, factoryCoId, {
+							const resolved = await resolveSchemaLazy(peer, factoryCoId, {
 								returnType: 'coId',
 								timeoutMs,
 							})

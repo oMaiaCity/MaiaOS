@@ -5,7 +5,7 @@
  */
 
 import { createLogger } from '@MaiaOS/logs'
-import { createFactoryMeta } from '../../factories/registry.js'
+import { createFactoryMeta } from '@MaiaOS/validation/peer-factory-registry'
 
 const log = createLogger('maia-db')
 

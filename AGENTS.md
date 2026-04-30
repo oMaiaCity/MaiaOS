@@ -13,6 +13,10 @@ Pull requests that merge a feature branch (for example `samuel/next`) into **`ne
 
 **Check:** your branch’s commits should sit **on top of** the current `next` tip (`git log origin/next..HEAD` should show only your work).
 
+### Review load — hotspots and single-author files
+
+Sentrux **`git_stats`** (90-day window) reported very high **single-author ratio** and many **solo-owned files**. For PRs that touch **structural hotspots** (high churn × complexity) or files with only one historical author, prefer a **second reviewer** when practical. This is a team policy; it does not replace rebasing on `next` or CI.
+
 ## Cursor Cloud specific instructions
 
 ### Services overview

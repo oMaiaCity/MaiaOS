@@ -4,7 +4,7 @@
  * - bootstrap: secret-key material (sync server process, browser secret-key dev login) — still NOT “Aven product type”; see `account-authentication-types.md`.
  * mode: signup → load or create | signin → load only | bootstrap → load or create
  */
-import { ensureProfileForNewAccount } from '@MaiaOS/db'
+import { ensureProfileForNewAccount as defaultEnsureProfileForNewAccount } from '@MaiaOS/db'
 import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/peer'
 import { getStorage } from '@MaiaOS/storage'
 import { cojsonInternals } from 'cojson'
@@ -19,6 +19,7 @@ const { accountHeaderForInitialAgentSecret, idforHeader } = cojsonInternals
  * @param {Array} options.peers - from setupSyncPeers().peers
  * @param {string} [options.name]
  * @param {Function} [options.migration]
+ * @param {Function} [options.ensureProfileForNewAccount] - defaults to `migration`; pass `@MaiaOS/db` helper when `migration` is custom and does not create `profile`
  * @param {'signup'|'signin'|'bootstrap'} options.mode
  * @param {{ setNode?: (n: unknown) => void }} [options.syncSetup]
  * @returns {{ accountID: string, agentSecret: import('cojson').AgentSecret, loadingPromise: Promise<{node: import('cojson').LocalNode, account: import('cojson').RawAccount, accountID: string, wasCreated: boolean}> }}
@@ -28,7 +29,8 @@ export async function ensureAccount({
 	storage,
 	peers = [],
 	name,
-	migration = ensureProfileForNewAccount,
+	migration = defaultEnsureProfileForNewAccount,
+	ensureProfileForNewAccount = migration,
 	mode,
 	syncSetup = null,
 } = {}) {
@@ -55,6 +57,7 @@ export async function ensureAccount({
 				peers,
 				storage,
 				migration,
+				ensureProfileForNewAccount,
 			})
 			if (setNode) setNode(loadResult.node)
 			return {
@@ -81,6 +84,7 @@ export async function ensureAccount({
 				peers,
 				storage,
 				migration,
+				ensureProfileForNewAccount,
 			})
 			if (setNode) setNode(createResult.node)
 			return {

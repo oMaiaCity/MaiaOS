@@ -15,7 +15,7 @@ import {
 	isAccountGroupOrProfile,
 	shouldSkipValidation,
 } from '@MaiaOS/validation/co-value-detection'
-import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
+import { EXCEPTION_FACTORIES } from '@MaiaOS/validation/peer-factory-registry'
 import * as groups from '../groups/groups.js'
 import { extractHeaderFromStorageMessage, indexFromMessage } from './factory-index-manager.js'
 

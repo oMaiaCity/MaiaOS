@@ -19,10 +19,10 @@
 		"./factory-registry": "./src/factory-registry.js",
 		"./peer-factory-registry": "./src/peer-factory-registry.js",
 		"./validation-hook-wrapper": "./src/validation-hook-wrapper.js",
-		"./co-value-detection": "./src/co-value-detection.js"
+		"./co-value-detection": "./src/co-value-detection.js",
+		"./normalize-covalue-data": "./src/normalize-covalue-data.js"
 	},
 	"dependencies": {
-		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
 		"ajv": "8.17.1",

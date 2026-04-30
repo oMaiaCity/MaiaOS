@@ -2,10 +2,10 @@
  * ValidationEngine - Centralized JSON Schema validation for MaiaOS
  */
 
-import { normalizeCoValueData } from '@MaiaOS/db'
-import { CO_TYPES_DEFS } from '@MaiaOS/universe'
+import { CO_TYPES_DEFS } from '@MaiaOS/universe/generated/registry.js'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
 import { withCanonicalFactorySchema } from './identity-from-maia-path.js'
+import { normalizeCoValueData } from './normalize-covalue-data.js'
 import { isFactoryRef } from './patterns.js'
 import { plugin as cobinaryPlugin } from './plugins/cobinary.plugin.js'
 import { plugin as cojsonPlugin } from './plugins/cojson.plugin.js'
@@ -201,9 +201,14 @@ export class ValidationEngine {
 	 * Register metaschema in AJV from the metaschema CoValue on peer (runtime source of truth).
 	 * Requires {@link peer.infra}.meta (set by loadInfraFromSparkOs).
 	 */
-	async hydrateMetaFromPeer(peer) {
+	async hydrateMetaFromPeer(peer, deps) {
 		await this.initialize()
-		const { resolveFactoryDefFromPeer } = await import('@MaiaOS/db')
+		if (!deps || typeof deps.resolveFactoryDefFromPeer !== 'function') {
+			throw new Error(
+				'[ValidationEngine] hydrateMetaFromPeer: resolveFactoryDefFromPeer is REQUIRED (wired from @MaiaOS/db)',
+			)
+		}
+		const { resolveFactoryDefFromPeer } = deps
 		const metaCoId = peer?.infra?.meta
 		if (!metaCoId?.startsWith?.('co_z')) {
 			throw new Error(

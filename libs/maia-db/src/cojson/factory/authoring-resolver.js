@@ -18,12 +18,20 @@
 
 import { removeIdFields } from '@MaiaOS/validation'
 import { ReactiveStore } from '../../reactive-store.js'
-import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
-import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
+
+async function ensureCoValueLoadedAuthoring(peer, id, opts) {
+	const { ensureCoValueLoaded } = await import('../crud/collection-helpers.js')
+	return ensureCoValueLoaded(peer, id, opts)
+}
+
+async function readLazy(...args) {
+	const { read } = await import('../crud/read.js')
+	return read(...args)
+}
 
 /**
  * Universal resolver — **co_z identifiers only** (string path). Use `@MaiaOS/db/seed/lookup-registry-key` for namekeys in seed.
@@ -58,7 +66,7 @@ export async function resolve(peer, identifier, options = {}) {
 			}
 
 			// Extract schema co-id from co-value's headerMeta using read() API
-			const coValueStore = await universalRead(peer, identifier.fromCoValue, null, null, null, {
+			const coValueStore = await readLazy(peer, identifier.fromCoValue, null, null, null, {
 				deepResolve: false,
 				timeoutMs,
 			})
@@ -107,12 +115,12 @@ export async function resolve(peer, identifier, options = {}) {
 	if (identifier.startsWith('co_z')) {
 		// IndexedDB may hold the CoValue before the node has loaded it into memory (see ensureCoValueLoaded).
 		try {
-			await ensureCoValueLoaded(peer, identifier, { waitForAvailable: true, timeoutMs })
+			await ensureCoValueLoadedAuthoring(peer, identifier, { waitForAvailable: true, timeoutMs })
 		} catch (_e) {
 			// Timeout: still try read() — subscription may populate the store.
 		}
 		// Load co-value using read() API
-		const store = await universalRead(peer, identifier, null, null, null, {
+		const store = await readLazy(peer, identifier, null, null, null, {
 			deepResolve,
 			timeoutMs,
 		})
@@ -181,10 +189,8 @@ export async function resolve(peer, identifier, options = {}) {
 export function resolveReactive(peer, identifier, options = {}) {
 	const { returnType = 'coId' } = options
 
-	// Use base reactive resolver
 	const store = resolveReactiveBase(peer, identifier, options)
 
-	// Transform store value based on returnType
 	if (returnType === 'factory' || returnType === 'coValue') {
 		const transformedStore = new ReactiveStore({ loading: true })
 
@@ -202,12 +208,10 @@ export function resolveReactive(peer, identifier, options = {}) {
 			}
 
 			if (state.factoryCoId) {
-				// Resolve schema or co-value based on returnType
 				if (returnType === 'coId') {
 					transformedStore._set({ loading: false, factoryCoId: state.factoryCoId })
 					unsubscribe()
 				} else {
-					// Resolve schema definition or co-value
 					try {
 						const resolved = await resolve(peer, state.factoryCoId, { returnType })
 						if (resolved) {
@@ -225,7 +229,6 @@ export function resolveReactive(peer, identifier, options = {}) {
 					}
 				}
 			} else if (state.coValueCore) {
-				// CoValue resolved - extract schema if needed
 				if (returnType === 'coId') {
 					const header = peer.getHeader(state.coValueCore)
 					const headerMeta = header?.meta || null
@@ -243,7 +246,6 @@ export function resolveReactive(peer, identifier, options = {}) {
 			}
 		})
 
-		// Cleanup
 		const originalUnsubscribe = transformedStore._unsubscribe
 		transformedStore._unsubscribe = () => {
 			if (originalUnsubscribe) originalUnsubscribe()
@@ -253,7 +255,6 @@ export function resolveReactive(peer, identifier, options = {}) {
 		return transformedStore
 	}
 
-	// returnType === 'coId' - return store as-is
 	return store
 }
 
@@ -339,14 +340,14 @@ export async function loadFactoriesFromAccount(node, account) {
 		const osId = await resolveSparkOsIdFromNode(node, account, '°maia')
 		if (!osId?.startsWith('co_z')) return {}
 
-		const osStore = await universalRead(peer, osId, null, null, null, { deepResolve: false })
+		const osStore = await readLazy(peer, osId, null, null, null, { deepResolve: false })
 		await waitForStoreReady(osStore, osId, 5000)
 		const osData = osStore.value
 		const metaCoId = osData?.[SPARK_OS_META_FACTORY_CO_ID_KEY]
 		const indexesId = osData?.indexes
 		const factoryCoIds = []
 		if (metaCoId?.startsWith?.('co_z') && indexesId?.startsWith?.('co_z')) {
-			const indexesStore = await universalRead(peer, indexesId, null, null, null, {
+			const indexesStore = await readLazy(peer, indexesId, null, null, null, {
 				deepResolve: false,
 			})
 			await waitForStoreReady(indexesStore, indexesId, 5000)

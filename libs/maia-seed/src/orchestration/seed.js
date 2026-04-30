@@ -7,6 +7,7 @@ import {
 	createCoValueForSpark,
 	ensureCoValueLoaded,
 	loadInfraFromSparkOs,
+	resolveFactoryDefFromPeer,
 	SPARK_OS_META_FACTORY_CO_ID_KEY,
 } from '@MaiaOS/db'
 import {
@@ -424,7 +425,7 @@ export async function seed(
 			await loadInfraFromSparkOs(peer, osId)
 		}
 		const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
-		await hydrateValidationMetaFromPeer(peer)
+		await hydrateValidationMetaFromPeer(peer, { resolveFactoryDefFromPeer })
 
 		// Schema definitions (meta-schema children) must always be CoMaps (have .get for resolution)
 		for (const factoryNanoidKey of sortedFactoryKeys) {

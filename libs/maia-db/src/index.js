@@ -93,6 +93,12 @@ export {
 	ensureIdentity,
 	listAccountIdsFromIdentityIndex,
 } from './cojson/registry/ensure-identity.js'
+export {
+	loadContextStore,
+	readStore,
+	resolveSchemaFromCoValue,
+	resolveToCoId,
+} from './cojson/resolve-helpers.js'
 export { SPARK_OS_META_FACTORY_CO_ID_KEY } from './cojson/spark-os-keys.js'
 export { CAP_GRANT_TTL_SECONDS } from './constants/capability-grant-ttl.js'
 export {

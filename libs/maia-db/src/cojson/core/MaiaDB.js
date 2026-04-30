@@ -5,7 +5,7 @@
  * No DBAdapter interface. Direct CoJSON operations.
  */
 
-import { TIMEOUT_COVALUE_LOAD } from '@MaiaOS/peer'
+import { TIMEOUT_COVALUE_LOAD } from '@MaiaOS/timeouts'
 import { wrapSyncManagerWithValidation } from '@MaiaOS/validation/validation-hook-wrapper'
 import { ReactiveStore } from '../../reactive-store.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
@@ -90,6 +90,7 @@ export class MaiaDB {
 		if (node.syncManager && (dbEngine || options?.beforeAcceptWrite)) {
 			wrapSyncManagerWithValidation(node.syncManager, this, dbEngine, {
 				beforeAcceptWrite: options?.beforeAcceptWrite,
+				resolve,
 			})
 		}
 	}

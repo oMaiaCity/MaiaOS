@@ -139,6 +139,7 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 			peers: syncSetup ? syncSetup.peers : [],
 			storage,
 			migration: ensureProfileForNewAccount,
+			ensureProfileForNewAccount,
 		})
 
 	const accountLoadingPromise = (async () => {

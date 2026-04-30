@@ -8,11 +8,15 @@
 import { createLogger } from '@MaiaOS/logs'
 import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
 import { invalidateResolvedDataForMutatedCoValue } from '../cache/coCache.js'
-import { resolve } from '../factory/authoring-resolver.js'
 import * as collectionHelpers from './collection-helpers.js'
 import * as dataExtraction from './data-extraction.js'
 
 const log = createLogger('maia-db')
+
+async function authoringResolve(peer, identifier, options) {
+	const { resolve } = await import('../factory/authoring-resolver.js')
+	return resolve(peer, identifier, options)
+}
 
 /**
  * Update existing record - directly updates CoValue using CoJSON raw methods
@@ -47,7 +51,7 @@ export async function update(peer, _schema, id, data, options = {}) {
 	// Extract schema co-id from co-value headerMeta
 	let factoryCoId = null
 	try {
-		factoryCoId = await resolve(peer, { fromCoValue: id }, { returnType: 'coId' })
+		factoryCoId = await authoringResolve(peer, { fromCoValue: id }, { returnType: 'coId' })
 	} catch (error) {
 		// Schema extraction failed - skip validation (co-values without schemas, like context co-values)
 		log.log(`[Update] Skipping validation for ${id}: ${error.message}`)
@@ -59,7 +63,7 @@ export async function update(peer, _schema, id, data, options = {}) {
 	// 3. No dbEngine available
 	if (factoryCoId && peer.dbEngine && factoryCoId.startsWith('co_z')) {
 		// Import exception schema checker
-		const { isExceptionFactory } = await import('../../factories/registry.js')
+		const { isExceptionFactory } = await import('@MaiaOS/validation/peer-factory-registry')
 
 		// Skip validation for exception schemas
 		if (!isExceptionFactory(factoryCoId)) {
@@ -68,7 +72,7 @@ export async function update(peer, _schema, id, data, options = {}) {
 
 			if (existingDataRaw) {
 				// Load schema to get allowed properties (additionalProperties: false → must strip metadata)
-				const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
+				const factoryDef = await authoringResolve(peer, factoryCoId, { returnType: 'factory' })
 				const allowedKeys =
 					factoryDef?.properties && typeof factoryDef.properties === 'object'
 						? new Set(Object.keys(factoryDef.properties))
@@ -130,6 +134,7 @@ export async function update(peer, _schema, id, data, options = {}) {
 				try {
 					await loadFactoryAndValidate(peer, factoryCoId, mergedData, `update for ${id}`, {
 						dataEngine: peer.dbEngine,
+						resolve: authoringResolve,
 					})
 				} catch (error) {
 					// If validation fails, throw error (operation never applied to CRDT)

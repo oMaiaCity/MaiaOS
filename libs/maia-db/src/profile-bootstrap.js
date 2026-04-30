@@ -8,7 +8,7 @@
  * @returns {Promise<void>}
  */
 
-import { createFactoryMeta } from './factories/registry.js'
+import { createFactoryMeta } from '@MaiaOS/validation/peer-factory-registry'
 
 function travelerFallbackId(account) {
 	const id =

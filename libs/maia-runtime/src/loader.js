@@ -224,8 +224,12 @@ export class MaiaOS {
 		await MaiaOS._initializeDatabase(os, config)
 
 		// Set schema resolver for runtime validation (engines need dataEngine for schema lookups)
+		const { resolveFactoryDefFromPeer } = await import('@MaiaOS/db')
 		const { setFactoryResolver } = await import('@MaiaOS/validation/validation.helper')
-		setFactoryResolver({ dataEngine: os.dataEngine })
+		setFactoryResolver({
+			resolveFactory: (factoryKey) =>
+				resolveFactoryDefFromPeer(os.dataEngine.peer, factoryKey, { returnType: 'factory' }),
+		})
 
 		// Initialize engines
 		MaiaOS._initializeEngines(os, config)

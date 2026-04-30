@@ -13,16 +13,30 @@
 
 import { createLogger } from '@MaiaOS/logs'
 import { FACTORY_REF_PATTERN } from '@MaiaOS/validation'
+import { EXCEPTION_FACTORIES } from '@MaiaOS/validation/peer-factory-registry'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
-import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
-import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
-import { create } from '../crud/create.js'
-import { read as universalRead } from '../crud/read.js'
-import { resolve } from '../factory/authoring-resolver.js'
+import { create as crudCreate } from '../crud/create.js'
+import { ensureCoValueLoaded } from '../crud/ensure-covalue-core.js'
 import * as groups from '../groups/groups.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 const log = createLogger('maia-db')
+
+/** Warm-load for indexing; avoids universal read() (Sentrux: breaks SCC with collection-helpers). */
+async function ensureCoValueReadyForIndex(peer, coId, timeoutMs) {
+	try {
+		await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs })
+		const core = peer.getCoValue(coId)
+		return Boolean(core && peer.isAvailable(core))
+	} catch {
+		return false
+	}
+}
+
+async function resolveFactoryAuthoring(peer, identifier, options) {
+	const { resolve } = await import('../factory/authoring-resolver.js')
+	return resolve(peer, identifier, options)
+}
 
 /**
  * @param {object} msg - Storage / NewContentMessage-style payload
@@ -114,17 +128,9 @@ async function ensureOsCoMap(peer, spark) {
 	const osId = await groups.getSparkOsId(peer, effectiveSpark)
 
 	if (osId) {
-		// spark.os exists - use universal read() API to load and resolve it
 		try {
-			// Use universal read() API to ensure spark.os is loaded and resolved
-			const osStore = await universalRead(peer, osId, null, null, null, {
-				deepResolve: false, // Don't need deep resolution for infrastructure
-				timeoutMs: 10000, // 10 second timeout for critical infrastructure
-			})
+			if (!(await ensureCoValueReadyForIndex(peer, osId, 10000))) return null
 
-			if (!osStore || osStore.value?.error) return null
-
-			// Get the raw CoValueCore and content after read() has loaded it
 			const osCore = peer.getCoValue(osId)
 			if (!osCore?.isAvailable()) return null
 
@@ -175,14 +181,8 @@ export async function ensureIndexesCoMap(peer) {
 	// Check if spark.os.indexes already exists
 	const indexesId = osCoMap.get('indexes')
 	if (indexesId) {
-		// Use universal read() API to load and resolve it
 		try {
-			const indexesStore = await universalRead(peer, indexesId, null, null, null, {
-				deepResolve: false,
-				timeoutMs: 10000,
-			})
-
-			if (!indexesStore || indexesStore.value?.error) return null
+			if (!(await ensureCoValueReadyForIndex(peer, indexesId, 10000))) return null
 
 			const indexesCore = peer.getCoValue(indexesId)
 			if (!indexesCore?.isAvailable()) return null
@@ -216,9 +216,8 @@ export async function ensureIndexesCoMap(peer) {
 		indexesSchemaCoId.startsWith('co_z') &&
 		peer.dbEngine
 	) {
-		// Proper runtime validation: Use CRUD create() with dbEngine for schema validation
-		const { create } = await import('../crud/create.js')
-		const created = await create(peer, indexesSchemaCoId, {})
+		// Proper runtime validation: Use CRUD crudCreate() with dbEngine for schema validation
+		const created = await crudCreate(peer, indexesSchemaCoId, {})
 		indexesCoMapId = created.id
 	} else {
 		const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
@@ -235,12 +234,7 @@ export async function ensureIndexesCoMap(peer) {
 
 	// Use universal read() API to load and resolve the newly created indexes CoMap
 	try {
-		const indexesStore = await universalRead(peer, indexesCoMapId, null, null, null, {
-			deepResolve: false,
-			timeoutMs: 5000,
-		})
-
-		if (indexesStore && !indexesStore.value?.error) {
+		if (await ensureCoValueReadyForIndex(peer, indexesCoMapId, 5000)) {
 			const indexesCore = peer.getCoValue(indexesCoMapId)
 			if (indexesCore && peer.isAvailable(indexesCore)) {
 				const indexesContent = indexesCore.getCurrentContent?.()
@@ -270,7 +264,7 @@ async function createNanoidsCoMapId(peer) {
 		indexesSchemaCoId.startsWith('co_z') &&
 		peer.dbEngine
 	) {
-		const created = await create(peer, indexesSchemaCoId, {})
+		const created = await crudCreate(peer, indexesSchemaCoId, {})
 		return created.id
 	}
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
@@ -311,11 +305,7 @@ export async function migrateLegacySparkOsNanoids(peer) {
 	}
 
 	try {
-		const store = await universalRead(peer, legacyId, null, null, null, {
-			deepResolve: false,
-			timeoutMs: 10000,
-		})
-		if (!store || store.value?.error) return
+		if (!(await ensureCoValueReadyForIndex(peer, legacyId, 10000))) return
 		const legacyCore = peer.getCoValue(legacyId)
 		if (!legacyCore?.isAvailable()) return
 		const legacyContent = legacyCore.getCurrentContent?.()
@@ -326,11 +316,7 @@ export async function migrateLegacySparkOsNanoids(peer) {
 
 		indexesContent.set(NANOID_INDEX_KEY, nanoidsCoMapId)
 
-		const nanoidsStore = await universalRead(peer, nanoidsCoMapId, null, null, null, {
-			deepResolve: false,
-			timeoutMs: 5000,
-		})
-		if (!nanoidsStore || nanoidsStore.value?.error) return
+		if (!(await ensureCoValueReadyForIndex(peer, nanoidsCoMapId, 5000))) return
 		const nanoidsCore = peer.getCoValue(nanoidsCoMapId)
 		if (!nanoidsCore?.isAvailable()) return
 		const target = nanoidsCore.getCurrentContent?.()
@@ -362,11 +348,7 @@ export async function migrateLegacySparkOsNanoids(peer) {
 async function loadNanoidCoMapContentById(peer, coId) {
 	if (typeof coId !== 'string' || !coId.startsWith('co_z')) return null
 	try {
-		const store = await universalRead(peer, coId, null, null, null, {
-			deepResolve: false,
-			timeoutMs: 10000,
-		})
-		if (!store || store.value?.error) return null
+		if (!(await ensureCoValueReadyForIndex(peer, coId, 10000))) return null
 		const core = peer.getCoValue(coId)
 		if (!core?.isAvailable()) return null
 		const nanoidsContent = core.getCurrentContent?.()
@@ -406,11 +388,7 @@ export async function ensureNanoidIndexCoMap(peer) {
 	indexesContent.set(NANOID_INDEX_KEY, nanoidsCoMapId)
 
 	try {
-		const nanoidsStore = await universalRead(peer, nanoidsCoMapId, null, null, null, {
-			deepResolve: false,
-			timeoutMs: 5000,
-		})
-		if (nanoidsStore && !nanoidsStore.value?.error) {
+		if (await ensureCoValueReadyForIndex(peer, nanoidsCoMapId, 5000)) {
 			const nanoidsCore = peer.getCoValue(nanoidsCoMapId)
 			if (nanoidsCore && peer.isAvailable(nanoidsCore)) {
 				const nanoidsContent = nanoidsCore.getCurrentContent?.()
@@ -491,7 +469,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 
 	if (!metaSchemaCoId?.startsWith('co_z')) return null
 
-	const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
+	const factoryDef = await resolveFactoryAuthoring(peer, factoryCoId, { returnType: 'factory' })
 	if (!factoryDef) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG) log.error('factoryDef missing')
 		return null
@@ -518,7 +496,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 	}
 
 	try {
-		const createdFactory = await create(peer, metaSchemaCoId, indexColistFactoryDef)
+		const createdFactory = await crudCreate(peer, metaSchemaCoId, indexColistFactoryDef)
 		const indexColistFactoryCoId = createdFactory.id
 		if (schemaMapContent && typeof schemaMapContent.set === 'function') {
 			try {
@@ -550,7 +528,7 @@ export async function ensureFactoryIndexColist(peer, factoryCoId, metaSchemaCoId
 
 	// Check indexing property from schema definition
 	// Skip creating index colists if indexing is not true (defaults to false)
-	const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
+	const factoryDef = await resolveFactoryAuthoring(peer, factoryCoId, { returnType: 'factory' })
 	if (!factoryDef) return null
 
 	// Check indexing property (defaults to false if not present)
@@ -840,7 +818,7 @@ export async function shouldIndexCoValue(peer, coValueCore) {
 	// If schema is a co-id, check if indexing is enabled for this schema
 	if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
 		try {
-			const factoryDef = await resolve(peer, schema, { returnType: 'factory' })
+			const factoryDef = await resolveFactoryAuthoring(peer, schema, { returnType: 'factory' })
 			if (!factoryDefAllowsInstanceIndexing(factoryDef)) {
 				return { shouldIndex: false, factoryCoId: schema }
 			}
@@ -906,10 +884,10 @@ async function ensureDefinitionCatalogColistId(peer, metaCoId) {
 		items: { $co: metaForItems },
 	}
 	try {
-		const created = await create(peer, metaCoId, removeIdFields(catalogSchemaDef))
+		const created = await crudCreate(peer, metaCoId, removeIdFields(catalogSchemaDef))
 		const catalogSchemaCoId = created?.id
 		if (!catalogSchemaCoId?.startsWith('co_z')) return null
-		const colist = await create(peer, catalogSchemaCoId, [])
+		const colist = await crudCreate(peer, catalogSchemaCoId, [])
 		const colistId = colist?.id
 		if (!colistId?.startsWith('co_z')) return null
 		indexesCoMap.set(metaCoId, colistId)
@@ -1046,7 +1024,7 @@ export async function isFactoryCoValue(peer, coValueCore) {
 		try {
 			let referencedCoValueCore = peer.getCoValue(schema)
 			if (!referencedCoValueCore) {
-				referencedCoValueCore = await ensureCoValueLoaded(peer, schema, {
+				referencedCoValueCore = await ensureCoValueLoadedLazy(peer, schema, {
 					waitForAvailable: true,
 					timeoutMs: 5000,
 				})

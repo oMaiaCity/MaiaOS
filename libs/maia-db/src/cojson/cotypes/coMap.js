@@ -5,13 +5,18 @@
  * Schema is REQUIRED - no fallbacks or defaults
  */
 
-import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
 import {
 	createFactoryMeta,
 	EXCEPTION_FACTORIES,
 	FACTORY_REGISTRY,
 	isExceptionFactory,
-} from '../../factories/registry.js'
+} from '@MaiaOS/validation/peer-factory-registry'
+import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
+
+async function authoringResolve(peer, identifier, options) {
+	const { resolve } = await import('../factory/authoring-resolver.js')
+	return resolve(peer, identifier, options)
+}
 
 /**
  * Create a generic CoMap with MANDATORY schema validation
@@ -84,6 +89,7 @@ export async function createCoMap(
 	if (!isExceptionFactory(factoryName)) {
 		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoMap', {
 			dataEngine: dbEngine,
+			resolve: authoringResolve,
 		})
 	}
 

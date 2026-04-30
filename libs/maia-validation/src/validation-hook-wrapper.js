@@ -25,8 +25,7 @@ async function waitForSchemaSync(peer, factoryCoId, resolve, timeoutMs = 5000) {
 	return null
 }
 
-async function validateRemoteTransactions(peer, dbEngine, msg) {
-	const { resolve } = await import('@MaiaOS/db')
+async function validateRemoteTransactions(peer, dbEngine, msg, resolve) {
 	const coId = msg.id
 	const detection = isAccountGroupOrProfile(msg, peer, coId)
 	if (detection.isGroup || detection.isAccount || detection.isProfile)
@@ -62,6 +61,7 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
 	try {
 		await loadFactoryAndValidate(peer, factoryCoId, content, `remote sync for ${coId}`, {
 			dataEngine: dbEngine,
+			resolve,
 		})
 		return { valid: true, error: null }
 	} catch (error) {
@@ -74,7 +74,12 @@ export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine, opts 
 	const originalHandleNewContent = syncManager.handleNewContent?.bind(syncManager)
 	if (!originalHandleNewContent) return syncManager
 
-	const { beforeAcceptWrite } = opts
+	const { beforeAcceptWrite, resolve } = opts
+	if (dbEngine && typeof resolve !== 'function') {
+		throw new Error(
+			'[wrapSyncManagerWithValidation] opts.resolve (MaiaDB authoring resolve) is REQUIRED when dbEngine is set',
+		)
+	}
 	syncManager.handleNewContent = async (msg, from) => {
 		if (beforeAcceptWrite && msg?.new && Object.keys(msg.new).length > 0) {
 			const result = await beforeAcceptWrite(peer, msg, from)
@@ -84,7 +89,7 @@ export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine, opts 
 			}
 		}
 		if (msg?.id && dbEngine) {
-			const validation = await validateRemoteTransactions(peer, dbEngine, msg)
+			const validation = await validateRemoteTransactions(peer, dbEngine, msg, resolve)
 			if (!validation.valid) {
 				opsValidation.warn('Rejected: %s', validation.error)
 				return

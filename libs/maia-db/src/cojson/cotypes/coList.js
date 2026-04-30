@@ -1,10 +1,15 @@
-import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
 import {
 	createFactoryMeta,
 	EXCEPTION_FACTORIES,
 	FACTORY_REGISTRY,
 	isExceptionFactory,
-} from '../../factories/registry.js'
+} from '@MaiaOS/validation/peer-factory-registry'
+import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
+
+async function authoringResolve(peer, identifier, options) {
+	const { resolve } = await import('../factory/authoring-resolver.js')
+	return resolve(peer, identifier, options)
+}
 
 /**
  * Create a generic CoList with MANDATORY schema validation
@@ -75,6 +80,7 @@ export async function createCoList(
 	if (!isExceptionFactory(factoryName)) {
 		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoList', {
 			dataEngine: dbEngine,
+			resolve: authoringResolve,
 		})
 	}
 

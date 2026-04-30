@@ -2,7 +2,7 @@ import {
 	createFactoryMeta,
 	FACTORY_REGISTRY,
 	isExceptionFactory,
-} from '../../factories/registry.js'
+} from '@MaiaOS/validation/peer-factory-registry'
 
 /**
  * Create a CoBinary (RawBinaryCoStream) with MANDATORY schema validation

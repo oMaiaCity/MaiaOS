@@ -1,4 +1,4 @@
-import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
+import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe/generated/registry.js'
 import { describe, expect, test } from 'bun:test'
 import { executableKeyFromMaiaPath, maiaIdentity } from '../src/identity-from-maia-path.js'
 

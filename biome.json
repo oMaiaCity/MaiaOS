@@ -21,7 +21,8 @@
 			"!**/src-tauri/target",
 			"!**/*.generated.*",
 			"!.cursor",
-			"!.vscode"
+			"!.vscode",
+			"!.agents"
 		]
 	},
 	"formatter": {
