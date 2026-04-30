@@ -23,9 +23,8 @@ Sentrux **`git_stats`** (90-day window) reported very high **single-author ratio
 
 | Service | Port | Description |
 |---|---|---|
-| `services/app` | 4200 | Frontend SPA (Bun HTML bundler with HMR); includes the 3D city game (`@MaiaOS/game`) via dashboard **The Game** |
+| `services/app` | 4200 | Frontend SPA (Bun HTML bundler with HMR); includes the 3D city game (`@MaiaOS/game`) via dashboard **The Game**; in-app LLM chat (`maia-ai-global.js`) calls sync **`/api/v0/llm/chat`** |
 | `services/sync` | 4201 | Unified sync (WebSocket + agent API + LLM proxy, PGlite storage) |
-| `services/moai` + `libs/maia-ai` | 8000 (default) | On-device LLM + TTS (LiteRT); UI is `services/moai/index.html`. Start with **`bun run dev:moai`** from the repo root (not part of `bun dev`). Uses **root `.env` only** (e.g. `HF_TOKEN`, `HOST`, `PORT`). |
 
 ### Sync: `PEER_APP_HOST` and multi-origin local dev
 
@@ -48,8 +47,7 @@ Sentrux **`git_stats`** (90-day window) reported very high **single-author ratio
 
 All commands are documented in root `package.json`. Key commands:
 
-- **`bun dev`** — starts app (4200) and sync (4201) in **parallel** after registry + helpers; the client retries if sync is still warming up (does **not** start Moai/maia-ai)
-- **`bun run dev:moai`** — runs **`services/moai/run-maia-dev.js`**, which starts the full **maia-ai** stack (`uv run --project libs/maia-ai`) with the Python venv in **`services/moai/.venv`** (not under `libs/maia-ai`); use **`bun run maia:sync`** to install/sync that env; configure via **root `.env`**
+- **`bun dev`** — starts app (4200) and sync (4201) in **parallel** after registry + helpers; the client retries if sync is still warming up
 - **`bun run dev:desktop`** — full stack (`bun dev`) then Tauri macOS window (requires Rust 1.88+, Xcode toolchain for Swift passkey plugin). **`tauri dev` is not fully code-signed like the bundle**; native passkeys (`ASAuthorizationController`) need a **built** `.app` (see below).
 - **`bun run build:desktop`** — production SPA build + Tauri `.app` bundle (signed per `src-tauri/tauri.conf.json`). **Use this build to test passkeys**, then open `services/app/src-tauri/target/release/bundle/macos/Maia City.app` (or run from Finder). Start `bun dev` (or sync only) in another terminal if the UI should talk to local sync.
 - **`bun run build:desktop:debug`** — same as `build:desktop` but `tauri build --debug` (faster Rust compile); signed bundle under `target/debug/bundle/macos/`.

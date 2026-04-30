@@ -23,7 +23,6 @@ agent-transcripts
 
 services/app
 services/sync
-services/moai
 services/landing
 scripts
 

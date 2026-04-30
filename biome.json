@@ -126,15 +126,6 @@
 					"allowComments": true
 				}
 			}
-		},
-		{
-			"includes": ["services/moai/**"],
-			"formatter": {
-				"enabled": false
-			},
-			"linter": {
-				"enabled": false
-			}
 		}
 	]
 }

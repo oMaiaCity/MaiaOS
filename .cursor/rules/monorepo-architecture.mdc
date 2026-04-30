@@ -22,15 +22,11 @@ MaiaOS/ (root)
 │   │   ├── package.json
 │   │   ├── main.js       # Bun-built SPA entry
 │   │   └── server.js     # Static file server (Bun)
-│   ├── moai/             # Moai service: static UI; `bun run dev:moai`; Python `.venv` + model cache here (not in `libs/maia-ai`)
-│   │   ├── package.json
-│   │   └── index.html
 │   └── sync/             # Sync + API service (sync.next.maia.city)
 │       ├── package.json
 │       └── deploy.sh     # Runs sync-server.mjs from maia-distros output
 └── libs/                 # Shared libraries (@MaiaOS/*)
-    ├── maia-ai/         # Python: LiteRT + TTS for Moai; own `pyproject.toml` + `uv` (not an npm workspace)
-    └── maia-*/          # maia-db, maia-runtime, maia-validation, etc.
+    └── maia-*/           # maia-db, maia-runtime, maia-validation, etc.
         ├── package.json
         └── src/
 ```
@@ -59,7 +55,7 @@ Reusable packages that can be shared across multiple workspaces:
 
 ### Root Package.json
 - **NO dependencies or devDependencies** at root level
-- Contains workspace configuration: `"workspaces": ["services/app", "services/sync", "services/moai", "libs/*"]`
+- Contains workspace configuration: `"workspaces": ["services/app", "services/aven", "services/sync", "libs/*"]`
 - **Root-level scripts**: Delegates to workspaces using `bun --filter`
 - All common commands can be run from root (dev, build, release, etc.)
 - Keeps the monorepo structure clean and maintainable

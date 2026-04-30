@@ -38,6 +38,7 @@ paths = [
 	"libs/maia-storage/*",
 	"libs/maia-ucan/*",
 	"libs/maia-brand/*",
+	"libs/ui/*",
 ]
 order = 3
 
