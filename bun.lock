@@ -185,9 +185,14 @@
       "name": "@MaiaOS/app",
       "version": "26.4.212041-next",
       "dependencies": {
+        "@MaiaOS/db": "workspace:*",
         "@MaiaOS/game": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
+        "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/runtime": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
         "@tauri-apps/api": "2.10.1",
       },
       "devDependencies": {

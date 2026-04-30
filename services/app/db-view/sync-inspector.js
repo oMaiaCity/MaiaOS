@@ -1,7 +1,7 @@
 /**
  * Sync storage inspector HTTP client + SYNC SERVER table helpers.
  */
-import { getSyncHttpBaseUrl } from '@MaiaOS/runtime'
+import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import { escapeAttr, escapeHtml } from '../utils.js'
 
 /** PG stores the table as `covalues` (identifier folded); inspector may list either spelling. */

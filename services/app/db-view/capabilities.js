@@ -1,13 +1,8 @@
 /**
  * Capabilities grants table hydration (post-paint).
  */
-import {
-	createPerfTracer,
-	debugLog,
-	debugWarn,
-	loadCapabilitiesGrants,
-	resolveAccountCoIdsToProfiles,
-} from '@MaiaOS/runtime'
+import { loadCapabilitiesGrants, resolveAccountCoIdsToProfiles } from '@MaiaOS/db'
+import { createPerfTracer, debugLog, debugWarn } from '@MaiaOS/logs'
 import { escapeHtml } from '../utils.js'
 import { buildCapabilitiesGrantRowsHtml } from './capabilities-shared.js'
 import { hydrateMembersView } from './members.js'

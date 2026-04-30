@@ -1,4 +1,4 @@
-import { createLogger } from '@MaiaOS/logs'
+import { createLogger } from '@MaiaOS/logs/subsystem-logger'
 import { ensureCoValueLoaded } from '../crud/ensure-covalue-core.js'
 
 const log = createLogger('maia-db')

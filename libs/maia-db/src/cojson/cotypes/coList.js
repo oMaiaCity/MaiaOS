@@ -4,7 +4,6 @@ import {
 	FACTORY_REGISTRY,
 	isExceptionFactory,
 } from '@MaiaOS/validation/peer-factory-registry'
-import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
 
 async function authoringResolve(peer, identifier, options) {
 	const { resolve } = await import('../factory/authoring-resolver.js')
@@ -78,6 +77,7 @@ export async function createCoList(
 		)
 	}
 	if (!isExceptionFactory(factoryName)) {
+		const { loadFactoryAndValidate } = await import('@MaiaOS/validation/validation.helper')
 		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoList', {
 			dataEngine: dbEngine,
 			resolve: authoringResolve,

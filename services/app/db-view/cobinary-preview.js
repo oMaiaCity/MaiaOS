@@ -1,7 +1,7 @@
 /**
  * CoBinary image preview hydration (post-render).
  */
-import { debugLog, debugWarn } from '@MaiaOS/runtime'
+import { debugLog, debugWarn } from '@MaiaOS/logs'
 
 const cobinaryPreviewCache = new Map()
 

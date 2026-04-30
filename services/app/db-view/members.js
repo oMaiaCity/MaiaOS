@@ -2,11 +2,11 @@
  * Capabilities shell — human registry members (guardian approval flow).
  */
 import {
-	debugWarn,
 	listAccountIdsFromIdentityIndex,
 	loadCapabilitiesGrants,
 	resolveAccountCoIdsToProfiles,
-} from '@MaiaOS/runtime'
+} from '@MaiaOS/db'
+import { debugWarn } from '@MaiaOS/logs'
 import { escapeAttr, escapeHtml, getProfileAvatarHtml, truncate } from '../utils.js'
 import { formatCapabilitiesExp } from './capabilities-shared.js'
 

@@ -3,15 +3,14 @@
  * Liquid glass design with widget-based layout
  */
 
+import { resolveAccountCoIdsToProfiles, resolveGroupCoIdsToCapabilityNames } from '@MaiaOS/db'
 import {
 	applyMaiaLoggingFromEnv,
 	createLogger,
 	createPerfTracer,
 	debugLog,
-	resolveAccountCoIdsToProfiles,
-	resolveGroupCoIdsToCapabilityNames,
 	resolveMaiaLoggingEnv,
-} from '@MaiaOS/runtime'
+} from '@MaiaOS/logs'
 import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 import { hydrateCapabilitiesView } from './db-view/capabilities.js'
