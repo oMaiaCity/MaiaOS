@@ -1,0 +1,34 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/views/sparks/interface.json",
+	"description": "Sparks view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"FORM_SUBMIT": {
+			"type": "object",
+			"description": "Form submit",
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Spark name"
+				}
+			},
+			"required": ["value"],
+			"additionalProperties": false
+		},
+		"SELECT_SPARK": {
+			"type": "object",
+			"description": "Select spark",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Spark co-id to select"
+				}
+			},
+			"required": ["id"],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

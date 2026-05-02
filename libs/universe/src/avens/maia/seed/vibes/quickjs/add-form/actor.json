@@ -1,0 +1,9 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"brand": "°maia/brand/maiacity.style.json",
+	"context": "°maia/quickjs/add-form/context.json",
+	"view": "°maia/quickjs/add-form/view.json",
+	"process": "°maia/quickjs/add-form/process.json",
+	"inbox": "°maia/quickjs/add-form/inbox.json",
+	"interface": "°maia/quickjs/add-form/interface.json"
+}

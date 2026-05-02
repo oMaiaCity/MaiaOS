@@ -1,3 +1,0 @@
-# Match repo root / services/app — .maia under this package must bundle as inlined JSON (not asset URLs)
-[loader]
-".maia" = "json"

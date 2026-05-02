@@ -50,6 +50,7 @@ Reusable packages that can be shared across multiple workspaces:
 - Libraries are self-contained with their own `package.json`
 - Can be imported using `workspace:*` syntax in other workspaces
 - Examples: shared utilities, types, components, etc.
+- **`@AvenOS/universe`**: Authoritative Maia seed content in `libs/universe/src/avens/maia/seed/`; numbered migration steps live in `libs/universe/src/avens/maia/migrations/` (`001-genesis` through `005-vibes`). After changing factory, actor, vibe, or authored data JSON there, run **`bun run migrate:registry`** at the repo root to refresh the per-step `generated.js` files.
 
 ## Dependency Management
 

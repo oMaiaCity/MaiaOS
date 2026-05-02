@@ -1,0 +1,13 @@
+{
+	"$factory": "°maia/factory/vibe.factory.json",
+	"key": "profile",
+	"name": "My Profile",
+	"description": "Update your profile picture",
+	"icon": "°maia/data/icons.data.json[nD7KNPHZ6mp9]",
+	"actor": "°maia/profile/intent/intent.actor.json",
+	"runtime": ["browser"],
+	"dependencies": [
+		"°maia/profile/intent/intent.actor.json",
+		"°maia/services/profile-image/actor.json"
+	]
+}

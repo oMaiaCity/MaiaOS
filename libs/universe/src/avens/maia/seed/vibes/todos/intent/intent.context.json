@@ -1,0 +1,7 @@
+{
+	"$factory": "°maia/factory/context.factory.json",
+	"layout": "@layout",
+	"@actors": {
+		"layout": "°maia/views/tabs/todos.actor.json"
+	}
+}

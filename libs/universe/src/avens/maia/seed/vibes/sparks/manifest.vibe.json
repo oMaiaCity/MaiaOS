@@ -1,0 +1,15 @@
+{
+	"$factory": "°maia/factory/vibe.factory.json",
+	"name": "Sparks",
+	"description": "Create and manage collaborative groups (sparks)",
+	"icon": "°maia/data/icons.data.json[UH6c0Gz163Jc]",
+	"actor": "°maia/sparks/intent/intent.actor.json",
+	"runtime": ["browser"],
+	"dependencies": [
+		"°maia/sparks/intent/intent.actor.json",
+		"°maia/views/sparks/actor.json",
+		"°maia/views/detail/actor.json",
+		"°maia/services/spark/actor.json",
+		"°maia/services/db/actor.json"
+	]
+}

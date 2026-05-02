@@ -1,0 +1,22 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/views/layout-paper/interface.json",
+	"description": "Paper layout view - aside note list + main paper editor",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SELECT_NOTE": {
+			"type": "object",
+			"description": "Select a note to load into the paper editor",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Co-id of the selected note"
+				}
+			},
+			"required": ["id"],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

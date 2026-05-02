@@ -18,14 +18,14 @@ ENV HUSKY=0
 RUN bun install
 # GIT_SHA must change per commit so remote BuildKit cannot reuse a stale distros bundle layer
 ARG GIT_SHA=unknown
-RUN echo "GIT_SHA=${GIT_SHA}" && bun run universe:registry && bun run distros:build
+RUN echo "GIT_SHA=${GIT_SHA}" && bun run migrate:registry && bun run distros:build
 
 # Runtime stage - single sync-server.mjs bundle + vendored pglite.wasm (no node_modules)
 FROM oven/bun:1-slim
 WORKDIR /app
 
-COPY --from=builder /app/libs/aven-os/output/aven-server.mjs ./sync-server.mjs
-COPY --from=builder /app/libs/aven-os/output/pglite.wasm ./
+COPY --from=builder /app/libs/kernel/output/aven-server.mjs ./sync-server.mjs
+COPY --from=builder /app/libs/kernel/output/pglite.wasm ./
 
 EXPOSE 4201
 

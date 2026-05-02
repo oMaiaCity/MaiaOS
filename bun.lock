@@ -12,8 +12,8 @@
         "lint-staged": "16.4.0",
       },
     },
-    "libs/aven-os": {
-      "name": "@MaiaOS/aven-os",
+    "libs/kernel": {
+      "name": "@AvenOS/kernel",
       "version": "26.4.212041-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
@@ -21,7 +21,6 @@
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/self": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
         "@electric-sql/pglite": "0.4.2",
       },
@@ -36,7 +35,6 @@
       "dependencies": {
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
-        "@MaiaOS/seed": "workspace:*",
         "@MaiaOS/timeouts": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
         "cojson": "0.20.16",
@@ -46,6 +44,7 @@
       "name": "@MaiaOS/engine",
       "version": "26.4.212041-next",
       "dependencies": {
+        "@AvenOS/universe": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/flows": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -53,7 +52,6 @@
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/self": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
         "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
         "cojson-transport-ws": "0.20.16",
@@ -70,10 +68,9 @@
       "name": "@MaiaOS/flows",
       "version": "26.4.212041-next",
       "dependencies": {
+        "@AvenOS/universe": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engine": "workspace:*",
-        "@MaiaOS/seed": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
       },
     },
@@ -106,17 +103,6 @@
         "@MaiaOS/timeouts": "workspace:*",
         "cojson": "0.20.16",
         "cojson-transport-ws": "0.20.16",
-      },
-    },
-    "libs/maia-seed": {
-      "name": "@MaiaOS/seed",
-      "version": "26.4.212041-next",
-      "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
-        "@MaiaOS/validation": "workspace:*",
-        "unicode-segmenter": "0.15.0",
       },
     },
     "libs/maia-self": {
@@ -155,23 +141,12 @@
         "@scure/base": "2.0.0",
       },
     },
-    "libs/maia-universe": {
-      "name": "@MaiaOS/universe",
-      "version": "26.4.212041-next",
-      "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/peer": "workspace:*",
-        "@noble/hashes": "2.2.0",
-        "unicode-segmenter": "0.15.0",
-      },
-    },
     "libs/maia-validation": {
       "name": "@MaiaOS/validation",
       "version": "26.4.212041-next",
       "dependencies": {
         "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
+        "@noble/hashes": "1.7.1",
         "ajv": "8.17.1",
         "unicode-segmenter": "0.15.0",
       },
@@ -183,11 +158,23 @@
         "@chenglou/pretext": "^0.0.6",
       },
     },
+    "libs/universe": {
+      "name": "@AvenOS/universe",
+      "version": "26.4.212041-next",
+      "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
+        "@MaiaOS/peer": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
+        "@noble/hashes": "1.7.1",
+        "unicode-segmenter": "0.15.0",
+      },
+    },
     "services/app": {
       "name": "@MaiaOS/app",
       "version": "26.4.212041-next",
       "dependencies": {
-        "@MaiaOS/aven-os": "workspace:*",
+        "@AvenOS/kernel": "workspace:*",
         "@MaiaOS/game": "workspace:*",
         "@tauri-apps/api": "2.10.1",
       },
@@ -207,18 +194,21 @@
       "name": "@MaiaOS/sync",
       "version": "26.4.212041-next",
       "dependencies": {
-        "@MaiaOS/aven-os": "workspace:*",
+        "@AvenOS/kernel": "workspace:*",
+        "@MaiaOS/flows": "workspace:*",
       },
     },
   },
   "packages": {
+    "@AvenOS/kernel": ["@AvenOS/kernel@workspace:libs/kernel"],
+
     "@AvenOS/ui": ["@AvenOS/ui@workspace:libs/ui"],
+
+    "@AvenOS/universe": ["@AvenOS/universe@workspace:libs/universe"],
 
     "@MaiaOS/app": ["@MaiaOS/app@workspace:services/app"],
 
     "@MaiaOS/aven": ["@MaiaOS/aven@workspace:services/aven"],
-
-    "@MaiaOS/aven-os": ["@MaiaOS/aven-os@workspace:libs/aven-os"],
 
     "@MaiaOS/brand": ["@MaiaOS/brand@workspace:libs/maia-brand"],
 
@@ -238,8 +228,6 @@
 
     "@MaiaOS/peer": ["@MaiaOS/peer@workspace:libs/maia-peer"],
 
-    "@MaiaOS/seed": ["@MaiaOS/seed@workspace:libs/maia-seed"],
-
     "@MaiaOS/self": ["@MaiaOS/self@workspace:libs/maia-self"],
 
     "@MaiaOS/storage": ["@MaiaOS/storage@workspace:libs/maia-storage"],
@@ -247,8 +235,6 @@
     "@MaiaOS/sync": ["@MaiaOS/sync@workspace:services/sync"],
 
     "@MaiaOS/timeouts": ["@MaiaOS/timeouts@workspace:libs/maia-timeouts"],
-
-    "@MaiaOS/universe": ["@MaiaOS/universe@workspace:libs/maia-universe"],
 
     "@MaiaOS/validation": ["@MaiaOS/validation@workspace:libs/maia-validation"],
 
@@ -430,7 +416,7 @@
 
     "@noble/ed25519": ["@noble/ed25519@3.0.1", "", {}, "sha512-t/T8LuK0ym8ALQudCCQCtrRdMSxBnRgHXw+wg+YsSlE6d+on7sX3flqlSJ2mOs9xEuchM36kj9SuX5MG7pXQMA=="],
 
-    "@noble/hashes": ["@noble/hashes@2.2.0", "", {}, "sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg=="],
+    "@noble/hashes": ["@noble/hashes@1.7.1", "", {}, "sha512-B8XBPsn4vT/KJAGqDzbwztd+6Yte3P4V7iafm24bxgDe/mlRuK6xmWPuCNrKt2vDafZ8MfJLlchDG/vYafQEjQ=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
@@ -1065,6 +1051,10 @@
     "yargs": ["yargs@17.7.2", "", { "dependencies": { "cliui": "^8.0.1", "escalade": "^3.1.1", "get-caller-file": "^2.0.5", "require-directory": "^2.1.1", "string-width": "^4.2.3", "y18n": "^5.0.5", "yargs-parser": "^21.1.1" } }, "sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w=="],
 
     "yargs-parser": ["yargs-parser@21.1.1", "", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
+
+    "@MaiaOS/maia-ucan/@noble/hashes": ["@noble/hashes@2.2.0", "", {}, "sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg=="],
+
+    "@MaiaOS/storage/@noble/hashes": ["@noble/hashes@2.2.0", "", {}, "sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg=="],
 
     "@babel/core/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 

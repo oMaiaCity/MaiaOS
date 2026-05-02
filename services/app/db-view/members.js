@@ -6,7 +6,7 @@ import {
 	listAccountIdsFromIdentityIndex,
 	loadCapabilitiesGrants,
 	resolveAccountCoIdsToProfiles,
-} from '@MaiaOS/aven-os/client'
+} from '@AvenOS/kernel/client'
 import { escapeAttr, escapeHtml, getProfileAvatarHtml, truncate } from '../utils.js'
 import { formatCapabilitiesExp } from './capabilities-shared.js'
 

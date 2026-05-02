@@ -24,7 +24,7 @@
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/maia-ucan": "workspace:*",
 		"@MaiaOS/self": "workspace:*",
-		"@MaiaOS/universe": "workspace:*",
+		"@AvenOS/universe": "workspace:*",
 		"@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
 		"cojson-transport-ws": "0.20.16",
 		"dompurify": "3.3.3",

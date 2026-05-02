@@ -1,0 +1,6 @@
+{
+	"id": "004-actors",
+	"title": "Service/UI actor configs (interfaces, views, contexts, …)",
+	"enabled": true,
+	"requires": ["003-sparks"]
+}

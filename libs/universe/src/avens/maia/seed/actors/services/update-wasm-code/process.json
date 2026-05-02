@@ -1,0 +1,15 @@
+{
+	"$factory": "°maia/factory/process.factory.json",
+	"handlers": {
+		"UPDATE_WASM_CODE": [
+			{
+				"function": true
+			}
+		],
+		"GET_WASM_CODE": [
+			{
+				"function": true
+			}
+		]
+	}
+}

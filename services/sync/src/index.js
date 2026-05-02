@@ -13,7 +13,6 @@
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
  *   PEER_SYNC_SEED: unset/false vs true — **only** gate for genesis (missing scaffold fails fast until true). Optional re-genesis when already scaffolded (then unset after one-shot).
  *     Local dev + pglite + no BUCKET_NAME: clears PGlite data dir + local binary-bucket; new Aven Tester is written to repo .env after startup succeeds (avoids mid-boot .env watcher restarts). Production/postgres/Tigris: never auto-clears or auto-rotates; manual only.
- *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, addressbook, quickjs/Vibe Creator, etc). "all" seeds every vibe including quickjs.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). Required when NODE_ENV=production. Unset in dev with PGlite or MAIA_DEV_CORS=1: localhost:4200 only (no wildcard).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  *   Read-only storage inspector (when sync is up): same paths; Bearer UCAN cmd `/admin/storage` + Capability grant (or `/admin`). BEGIN READ ONLY for POST /query.
@@ -40,9 +39,9 @@ import {
 	OPS_PREFIX,
 	runSteps,
 	signIn,
-	syncServerInfraSteps,
 	waitForStoreReady,
-} from '@MaiaOS/aven-os/server'
+} from '@AvenOS/kernel/server'
+import { syncServerInfraSteps } from '@MaiaOS/flows/catalog/sync-server'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHandleAgentHttp } from './handlers/agent-http.js'
@@ -103,9 +102,6 @@ if (isProduction && !process.env.PEER_APP_HOST?.trim()) {
 		`${OPS_PREFIX.sync} PEER_APP_HOST is required in production (allowed browser origin, e.g. https://next.maia.city)`,
 	)
 }
-
-// SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs / Vibe Creator). Override: "todos,chat" or "todos,chat,addressbook,quickjs"
-const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
 const IS_LOCAL_DEV_CORS =
 	usePGlite || process.env.MAIA_DEV_CORS === 'true' || process.env.MAIA_DEV_CORS === '1'
@@ -366,7 +362,6 @@ const handleAgentHttp = createHandleAgentHttp({
 		accountID,
 		avenMaiaGuardian,
 		peerSyncSeed,
-		seedVibesConfig,
 	},
 	extend: {
 		err,
@@ -616,7 +611,6 @@ syncDevLifecycleLog.log(`Listening on 0.0.0.0:${PORT}`)
 				serverAccountId: accountID,
 				guardianAccountId: avenMaiaGuardian,
 				maiaName,
-				seedVibes: seedVibesConfig,
 			},
 			allowApply: peerSyncSeed,
 		})

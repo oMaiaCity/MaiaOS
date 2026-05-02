@@ -1,0 +1,24 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/maia-script-expression.factory.json",
+	"description": "MaiaScript JSON DSL (evaluator enforces depth and operation whitelist)",
+	"cotype": "comap",
+	"oneOf": [
+		{
+			"type": "object",
+			"additionalProperties": true
+		},
+		{
+			"type": "string"
+		},
+		{
+			"type": "number"
+		},
+		{
+			"type": "boolean"
+		},
+		{
+			"type": "null"
+		}
+	]
+}

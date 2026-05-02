@@ -1,0 +1,9 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"type": "service",
+	"process": "°maia/profile/intent/intent.process.json",
+	"view": "°maia/profile/intent/intent.view.json",
+	"context": "°maia/profile/intent/intent.context.json",
+	"brand": "°maia/brand/maiacity.style.json",
+	"inbox": "°maia/profile/intent/inbox.json"
+}

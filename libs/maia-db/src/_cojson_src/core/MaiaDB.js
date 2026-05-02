@@ -21,7 +21,6 @@ import {
 	maiaDbRead,
 	maiaDbResolve,
 	maiaDbResolveReactive,
-	maiaDbSeed,
 	maiaDbUpdate,
 	maiaDbWaitForReactiveResolution,
 } from './maia-db-data-plane.js'
@@ -186,10 +185,6 @@ export class MaiaDB {
 
 	async getRawRecord(id) {
 		return maiaDbGetRawRecord(this, id)
-	}
-
-	async seed(configs, schemas, data, options = {}) {
-		return maiaDbSeed(this, configs, schemas, data, options)
 	}
 
 	async ensureAccountOsReady(options = {}) {

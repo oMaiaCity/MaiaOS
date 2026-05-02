@@ -121,7 +121,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 		// These checks must be fast and not trigger any storage operations
 
 		// 1. Use universal skip validation helper (consolidates all skip logic)
-		// NOTE: We DON'T skip @metaSchema here - °maia/factory/meta.factory.maia uses @metaSchema but should be registered!
+		// NOTE: We DON'T skip @metaSchema here - °maia/factory/meta.factory.json uses @metaSchema but should be registered!
 		// Let isFactoryCoValue() and shouldIndexCoValue() handle °maia detection properly
 		let shouldSkipIndexing = shouldSkipValidation(normalizedMsg, peer, coId)
 

@@ -13,6 +13,7 @@
 		"./nanoid": "./src/nanoid.js",
 		"./identity-from-maia-path": "./src/identity-from-maia-path.js",
 		"./builtin-factories": "./src/data/builtin-factories.data.js",
+		"./data/co-types": "./src/data/co-types.js",
 		"./operation-result": "./src/operation-result.js",
 		"./vibe-keys": "./src/vibe-keys.js",
 		"./remove-id-fields": "./src/remove-id-fields.js",
@@ -24,7 +25,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/logs": "workspace:*",
-		"@MaiaOS/universe": "workspace:*",
+		"@noble/hashes": "1.7.1",
 		"ajv": "8.17.1",
 		"unicode-segmenter": "0.15.0"
 	},

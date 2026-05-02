@@ -2,7 +2,7 @@
  * Full-viewport Three.js scene from @MaiaOS/game (dashboard screen `the-game`).
  * Loads `@MaiaOS/game` only when entering The Game (dynamic import + parallel splash decode).
  */
-import { createLogger } from '@MaiaOS/aven-os/client'
+import { createLogger } from '@AvenOS/kernel/client'
 
 const gameMountLog = createLogger('game')
 

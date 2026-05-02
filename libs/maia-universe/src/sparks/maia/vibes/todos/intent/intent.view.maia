@@ -1,8 +1,0 @@
-{
-	"$factory": "°maia/factory/view.factory.maia",
-	"content": {
-		"tag": "div",
-		"class": "stack",
-		"$slot": "$layout"
-	}
-}

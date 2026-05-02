@@ -22,7 +22,6 @@
 	},
 	"dependencies": {
 		"@MaiaOS/validation": "workspace:*",
-		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/timeouts": "workspace:*",

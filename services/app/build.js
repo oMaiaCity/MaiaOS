@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 /**
  * Bun build for maia SPA - SPA mode intact.
- * Requires aven-os built first (aven-client.mjs).
+ * Requires @AvenOS/kernel built first (aven-client.mjs).
  * Sync-assets runs directly into dist/brand (single source: libs/maia-brand).
  */
 import { join } from 'node:path'
@@ -17,7 +17,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const serviceDir = join(__dirname)
 const distDir = join(serviceDir, 'dist')
 
-// Clear dist before build so stale .maia files are not left over
+// Clear dist before build so stale bundled assets are not left over
 if (existsSync(distDir)) {
 	rmSync(distDir, { recursive: true })
 }
@@ -39,7 +39,7 @@ if (syncResult.status !== 0) {
 
 // maia-storage uses package.json "browser" exports for postgres/pglite → stubs in client builds
 
-const clientPath = join(serviceDir, '../../libs/aven-os/output/aven-client.mjs')
+const clientPath = join(serviceDir, '../../libs/kernel/output/aven-client.mjs')
 if (!existsSync(clientPath)) {
 	buildLog.error('Run bun run distros:build first')
 	process.exit(1)
@@ -74,15 +74,12 @@ const envDefine = {
 	'import.meta.env.VITE_PEER_SYNC_HOST': JSON.stringify(
 		process.env.VITE_PEER_SYNC_HOST || 'sync.next.maia.city',
 	),
-	'import.meta.env.VITE_SEED_VIBES': JSON.stringify(process.env.VITE_SEED_VIBES || 'all'),
 }
 
 // Banner: ensure import.meta.env exists with production values (Bun doesn't inject like Vite)
 const syncHost = process.env.VITE_PEER_SYNC_HOST || 'sync.next.maia.city'
-const seedVibes = process.env.VITE_SEED_VIBES || 'all'
 const envObj = JSON.stringify({
 	VITE_PEER_SYNC_HOST: syncHost,
-	VITE_SEED_VIBES: seedVibes,
 	DEV: false,
 	LOG_MODE: process.env.LOG_MODE || '',
 	LOG_LEVEL: process.env.LOG_LEVEL || 'warn',
@@ -107,8 +104,6 @@ const result = await Bun.build({
 	sourcemap: false,
 	define: envDefine,
 	banner,
-	tsconfig: join(serviceDir, 'jsconfig.build.json'),
-	loader: { '.maia': 'json' },
 })
 
 if (!result.success) {

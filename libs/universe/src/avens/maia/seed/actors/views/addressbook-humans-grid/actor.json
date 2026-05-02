@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"context": "°maia/views/addressbook-humans-grid/context.json",
+	"view": "°maia/views/addressbook-grid/view.json",
+	"process": "°maia/views/addressbook-grid/process.json",
+	"brand": "°maia/brand/maiacity.style.json",
+	"style": "°maia/views/addressbook-grid/style.json",
+	"inbox": "°maia/views/addressbook-humans-grid/inbox.json",
+	"interface": "°maia/views/addressbook-humans-grid/interface.json"
+}

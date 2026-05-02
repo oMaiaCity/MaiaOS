@@ -2,7 +2,7 @@
 
 /**
  * Development script for MaiaOS — app (4200) + sync (4201), started in parallel.
- * - **Default (empty `LOG_MODE`)**: orchestrator is quiet — no piped child OPS lines; only boot banner, universe manifest, orchestrator hints, errors/warnings, and a final green “Ready” cluster after sync finishes (`[sync] Ready` from services/sync).
+ * - **Default (empty `LOG_MODE`)**: orchestrator is quiet — no piped child OPS lines; only boot banner, migrate registries, orchestrator hints, errors/warnings, and a final green “Ready” cluster after sync finishes (`[sync] Ready` from services/sync).
  * - **`LOG_MODE=dev.verbose`**: forward essentially all child stdout/stderr (split-terminal parity).
  * - **OPS passthrough without verbose**: set `LOG_MODE=ops.sync`, `ops.all`, etc.
  */
@@ -546,17 +546,17 @@ async function main() {
 
 	logger.log('')
 
-	// Regenerate maia-universe registry before anything imports it
-	const universeLogger = createLogger('universe')
+	// Regenerate per-step migrate registries before anything imports them
+	const migrateRegLogger = createLogger('universe')
 	try {
-		execSync('bun scripts/generate-maia-universe-registry.mjs', {
+		execSync('bun scripts/generate-migrate-registries.mjs', {
 			cwd: rootDir,
 			stdio: 'pipe',
 			env: process.env,
 		})
-		universeLogger.success('manifested')
+		migrateRegLogger.success('generated')
 	} catch (e) {
-		universeLogger.error(`Manifest failed: ${e.stderr?.toString().trim() || e.message}`)
+		migrateRegLogger.error(`Registry codegen failed: ${e.stderr?.toString().trim() || e.message}`)
 		process.exit(1)
 	}
 

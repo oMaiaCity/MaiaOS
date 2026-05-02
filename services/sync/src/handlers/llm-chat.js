@@ -1,4 +1,4 @@
-import { verifyInvocationToken } from '@MaiaOS/aven-os/server'
+import { verifyInvocationToken } from '@AvenOS/kernel/server'
 
 /** LLM messages schema: role + optional content. Enforces structure and limits. */
 const LLM_MAX_MESSAGES = 100

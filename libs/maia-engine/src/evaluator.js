@@ -1,4 +1,3 @@
-import { withCanonicalFactorySchema } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { validateAgainstFactoryOrThrow } from '@MaiaOS/validation/validation.helper'
 import { FORBIDDEN_PATH_KEYS } from './security.js'
 
@@ -65,18 +64,14 @@ export class Evaluator {
 			!Array.isArray(expression)
 		) {
 			try {
-				const { default: raw } = await import(
-					'@MaiaOS/universe/factories/maia-script-expression.factory.maia'
+				const { ensureFactoriesLoaded, getFactory } = await import(
+					'@MaiaOS/validation/factory-registry.js'
 				)
-				if (!raw || typeof raw !== 'object') {
-					throw new Error('[Evaluator] maia-script-expression.factory.maia did not load as an object')
+				await ensureFactoriesLoaded()
+				const expressionFactory = getFactory('maia-script-expression')
+				if (!expressionFactory || typeof expressionFactory !== 'object') {
+					throw new Error('[Evaluator] maia-script-expression factory schema unavailable')
 				}
-				const cloned =
-					typeof structuredClone === 'function' ? structuredClone(raw) : JSON.parse(JSON.stringify(raw))
-				const expressionFactory = withCanonicalFactorySchema(
-					cloned,
-					'maia-script-expression.factory.maia',
-				)
 				await validateAgainstFactoryOrThrow(expressionFactory, expression, 'maia-script-expression')
 			} catch (error) {
 				throw new Error(`[Evaluator] Invalid MaiaScript expression: ${error.message}`)

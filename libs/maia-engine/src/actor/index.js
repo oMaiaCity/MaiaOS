@@ -19,8 +19,8 @@ import {
 	resolveToCoId,
 } from '@MaiaOS/db/resolve-helpers'
 import { createOpsLogger } from '@MaiaOS/logs'
-import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
 import { containsExpressions } from '@MaiaOS/validation/expression-resolver'
+import { executableKeyFromMaiaPath } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { validateAgainstFactory } from '@MaiaOS/validation/validation.helper'
 import { RENDER_STATES } from '../render-states.js'
 import { sanitizePayloadForValidation, stripInfrastructureKeysForValidation } from '../security.js'
@@ -845,14 +845,14 @@ export class ActorEngine {
 			}
 		}
 		if (!executableFunction) {
-			const { getActor } = await import('@MaiaOS/universe/actors')
-			const namespacePath =
-				typeof actorConfig.$nanoid === 'string'
-					? (ACTOR_NANOID_TO_EXECUTABLE_KEY[actorConfig.$nanoid] ?? null)
-					: null
+			const { getActor } = await import(
+				'@AvenOS/universe/migrations/004-actors/actors-registry-index.js'
+			)
+			const label = typeof actorConfig.$label === 'string' ? actorConfig.$label : null
+			const namespacePath = label ? executableKeyFromMaiaPath(label) : null
 			if (!namespacePath) {
 				throw new Error(
-					`[ActorEngine] spawnActor: actorConfig.$nanoid must map to a native JS actor (co-id ${actorId})`,
+					`[ActorEngine] spawnActor: actorConfig.$label must yield a native JS actor executable key (co-id ${actorId})`,
 				)
 			}
 			const actorModule = getActor(namespacePath)

@@ -1,5 +1,4 @@
 export { bootstrapGuardianSteps, bootstrapIdentitySteps } from './catalog/bootstrap-handshake.js'
-export { syncServerInfraSteps, syncServerStartupSteps } from './catalog/sync-server.js'
 export { createFlowContext } from './context.js'
 export { PEER_SYNC_SEED_POLICY, runSteps } from './runner.js'
 export { identitySelfAvenStep } from './steps/identity.js'

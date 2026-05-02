@@ -1,0 +1,11 @@
+{
+	"$factory": "°maia/factory/context.factory.json",
+	"messages": "@messages",
+	"infoCard": "@infoCard",
+	"input": "@input",
+	"@actors": {
+		"messages": "°maia/views/messages/actor.json",
+		"infoCard": "°maia/views/info-card/actor.json",
+		"input": "°maia/views/input/for-chat.actor.json"
+	}
+}

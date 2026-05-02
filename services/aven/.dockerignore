@@ -28,17 +28,12 @@ scripts
 
 libs/maia-brand
 libs/maia-db
-libs/aven-os
+libs/kernel
 libs/maia-flows
 libs/maia-game
 libs/maia-peer
 libs/maia-engine
-libs/maia-seed
 libs/maia-self
-libs/maia-storage
-libs/maia-ucan
-libs/maia-universe
-libs/maia-validation
 libs/FUTURE
 
 services/aven/tests

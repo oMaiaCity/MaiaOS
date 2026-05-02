@@ -1,6 +1,0 @@
-{
-	"$factory": "°maia/factory/actor.factory.maia",
-	"process": "°maia/services/update-wasm-code/process.maia",
-	"inbox": "°maia/services/update-wasm-code/inbox.maia",
-	"interface": "°maia/services/update-wasm-code/interface.maia"
-}

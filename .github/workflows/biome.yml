@@ -22,8 +22,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Generate universe registry
-        run: bun run universe:registry
+      - name: Generate migrate registries
+        run: bun run migrate:registry
 
       - name: Run Biome
         run: bun run check:ci
@@ -54,11 +54,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Install aven-os workspace (bundles build)
-        run: cd libs/aven-os && bun install --frozen-lockfile
+      - name: Install @AvenOS/kernel workspace (bundles build)
+        run: cd libs/kernel && bun install --frozen-lockfile
 
-      - name: Generate universe registry
-        run: bun run universe:registry
+      - name: Generate migrate registries
+        run: bun run migrate:registry
 
       - name: Build distros
         run: bun run distros:build

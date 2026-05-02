@@ -81,12 +81,6 @@ export async function maiaDbGetRawRecord(db, id) {
 /**
  * @param {object} db - MaiaDB
  */
-export async function maiaDbSeed(db, configs, schemas, data, options = {}) {
-	if (!db.account) throw new Error('[MaiaDB] Account required for seed')
-	const { seed: runSeed } = await import('@MaiaOS/seed/orchestration')
-	return await runSeed(db.account, db.node, configs, schemas, data || {}, db, options)
-}
-
 /**
  * @param {object} db - MaiaDB
  */

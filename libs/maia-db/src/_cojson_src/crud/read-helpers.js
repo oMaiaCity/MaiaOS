@@ -1,4 +1,8 @@
 import { createLogger } from '@MaiaOS/logs'
+import { maiaIdentity } from '@MaiaOS/validation'
+
+import { INFRA_SLOTS } from '../infra-slot-manifest.js'
+import { waitForStoreReady } from './read-operations.js'
 
 export const log = createLogger('maia-db')
 
@@ -60,7 +64,7 @@ export function isQueryObject(value) {
 	return true
 }
 
-/** Query filter lives under `options.filter` (context.factory.maia). */
+/** Query filter lives under `options.filter` (context.factory.json). */
 export function getQueryFilterFromValue(value) {
 	return value?.options?.filter ?? null
 }
@@ -126,4 +130,70 @@ export function getMapDependencyCoIds(rawData, mapConfig) {
 		}
 	}
 	return deps
+}
+
+/** Leaf basename `identity.factory.json` from meta-schema title `°maia/factory/identity.factory.json`. */
+function factoryBasenameFromSchemaTitle(title) {
+	if (typeof title !== 'string') return null
+	const leaf = title.includes('/') ? title.split('/').pop() : title.trim()
+	return leaf?.endsWith('.factory.json') ? leaf : null
+}
+
+/**
+ * Actor contexts persist factory schema co-ids from seed/bootstrap. After a fresh scaffold or registry
+ * churn, those ids can diverge from spark.os infra slots. Bootstrap persists factory **definition**
+ * bodies **without** `$nanoid` (only `title`, properties, …), so alignment uses `title` → basename and
+ * matches {@link INFRA_SLOTS}. Optional `$nanoid` fallback covers older rows.
+ *
+ * Rewiring queries to `peer.infra.*` restores index lookup and spark registry reads
+ * (`resolvedSchema === peer.infra.dataSpark`).
+ *
+ * @param {Object} peer - MaiaDB-like peer with `.infra`
+ * @param {string} factoryCoId - Resolved schema co-id (`co_z…`)
+ * @param {Function} universalRead - Same contract as universal read(peer, …)
+ * @param {number} [timeoutMs]
+ * @returns {Promise<string>}
+ */
+export async function alignQueryFactoryCoIdWithSparkOsInfra(
+	peer,
+	factoryCoId,
+	universalRead,
+	timeoutMs = 5000,
+) {
+	if (!factoryCoId?.startsWith?.('co_z') || !peer?.infra || typeof universalRead !== 'function') {
+		return factoryCoId
+	}
+
+	for (const { infraKey } of INFRA_SLOTS) {
+		const canonical = peer.infra[infraKey]
+		if (canonical?.startsWith?.('co_z') && factoryCoId === canonical) return factoryCoId
+	}
+
+	let slotBasename = null
+	try {
+		const store = await universalRead(peer, factoryCoId, null, null, {
+			deepResolve: false,
+			timeoutMs,
+		})
+		await waitForStoreReady(store, factoryCoId, Math.min(timeoutMs, 3000))
+		const data = store?.value
+		slotBasename = factoryBasenameFromSchemaTitle(data?.title)
+		if (!slotBasename && typeof data?.$nanoid === 'string' && data.$nanoid.length > 0) {
+			for (const { basename } of INFRA_SLOTS) {
+				if (data.$nanoid === maiaIdentity(basename).$nanoid) {
+					slotBasename = basename
+					break
+				}
+			}
+		}
+	} catch {
+		return factoryCoId
+	}
+
+	if (!slotBasename) return factoryCoId
+
+	const slot = INFRA_SLOTS.find((s) => s.basename === slotBasename)
+	const canonical = slot ? peer.infra[slot.infraKey] : null
+	if (canonical?.startsWith?.('co_z') && factoryCoId !== canonical) return canonical
+	return factoryCoId
 }

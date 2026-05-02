@@ -1,0 +1,28 @@
+{
+	"$factory": "°maia/factory/view.factory.json",
+	"content": {
+		"tag": "div",
+		"class": "paper-background",
+		"children": [
+			{
+				"tag": "div",
+				"class": "paper-scroll",
+				"children": [
+					{
+						"tag": "div",
+						"class": "paper-content",
+						"text": {
+							"$join": [
+								{
+									"$context": "selectedNote.content.items"
+								},
+								""
+							]
+						},
+						"format": "md"
+					}
+				]
+			}
+		]
+	}
+}

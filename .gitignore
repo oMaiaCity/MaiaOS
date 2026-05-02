@@ -77,8 +77,8 @@ services/app/public/
 
 debug.log*
 
-# aven-os bundles + wasm (built in Docker/CI; local `bun run distros:build`)
-libs/aven-os/output/
+# @AvenOS/kernel bundles + wasm (built in Docker/CI; local `bun run distros:build`)
+libs/kernel/output/
 
 # Generated universe registry (regenerated in CI, Docker build, and dev)
 libs/maia-universe/src/generated/

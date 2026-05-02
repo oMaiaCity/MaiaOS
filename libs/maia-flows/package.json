@@ -12,10 +12,9 @@
 		"./steps/identity": "./src/steps/identity.js"
 	},
 	"dependencies": {
+		"@AvenOS/universe": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/engine": "workspace:*",
-		"@MaiaOS/seed": "workspace:*",
-		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/validation": "workspace:*"
 	},
 	"scripts": {

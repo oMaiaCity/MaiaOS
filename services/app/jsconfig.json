@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@MaiaOS/aven-os/client": ["../../libs/aven-os/client/index.js"]
+			"@AvenOS/kernel/client": ["../../libs/kernel/client/index.js"]
 		}
 	}
 }

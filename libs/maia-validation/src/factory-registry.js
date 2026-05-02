@@ -7,32 +7,32 @@ import { withCanonicalFactorySchema } from './identity-from-maia-path.js'
 
 /** Basename → key in getAllFactories() return object. */
 const FACTORY_BASENAME_TO_REGISTRY_KEY = {
-	'actor.factory.maia': 'actor',
-	'capability.factory.maia': 'os/capability',
-	'context.factory.maia': 'context',
-	'cotext.factory.maia': 'os/cotext',
-	'event.factory.maia': 'event',
-	'factories-registry.factory.maia': 'os/factories-registry',
-	'groups.factory.maia': 'os/groups',
-	'identity.factory.maia': 'os/identity',
-	'icon.factory.maia': 'data/icon',
-	'inbox.factory.maia': 'inbox',
-	'indexes-registry.factory.maia': 'os/indexes-registry',
-	'maia-script-expression.factory.maia': 'maia-script-expression',
-	'note.factory.maia': 'data/notes',
-	'os-registry.factory.maia': 'os/os-registry',
-	'process.factory.maia': 'process',
-	'sparks-registry.factory.maia': 'os/sparks-registry',
-	'style.factory.maia': 'style',
-	'todo.factory.maia': 'data/todos',
-	'vibe.factory.maia': 'vibe',
-	'vibes-registry.factory.maia': 'os/vibes-registry',
-	'view.factory.maia': 'view',
-	'wasm.factory.maia': 'os/wasm',
-	'chat.factory.maia': 'data/chat',
-	'cobinary.factory.maia': 'data/cobinary',
-	'profile.factory.maia': 'data/profile',
-	'spark.factory.maia': 'data/spark',
+	'actor.factory.json': 'actor',
+	'capability.factory.json': 'os/capability',
+	'context.factory.json': 'context',
+	'cotext.factory.json': 'os/cotext',
+	'event.factory.json': 'event',
+	'factories-registry.factory.json': 'os/factories-registry',
+	'groups.factory.json': 'os/groups',
+	'identity.factory.json': 'os/identity',
+	'icon.factory.json': 'data/icon',
+	'inbox.factory.json': 'inbox',
+	'indexes-registry.factory.json': 'os/indexes-registry',
+	'maia-script-expression.factory.json': 'maia-script-expression',
+	'note.factory.json': 'data/notes',
+	'os-registry.factory.json': 'os/os-registry',
+	'process.factory.json': 'process',
+	'sparks-registry.factory.json': 'os/sparks-registry',
+	'style.factory.json': 'style',
+	'todo.factory.json': 'data/todos',
+	'vibe.factory.json': 'vibe',
+	'vibes-registry.factory.json': 'os/vibes-registry',
+	'view.factory.json': 'view',
+	'wasm.factory.json': 'os/wasm',
+	'chat.factory.json': 'data/chat',
+	'cobinary.factory.json': 'data/cobinary',
+	'profile.factory.json': 'data/profile',
+	'spark.factory.json': 'data/spark',
 }
 
 /** @type {Record<string, object> | null} */
@@ -53,32 +53,32 @@ function buildFactories(rawByBasename) {
 		)
 	}
 
-	const actorSchema = p('actor.factory.maia')
-	const capabilitySchema = p('capability.factory.maia')
-	const chatDataSchema = p('chat.factory.maia')
-	const cobinaryDataSchema = p('cobinary.factory.maia')
-	const contextSchema = p('context.factory.maia')
-	const cotextSchema = p('cotext.factory.maia')
-	const eventFactory = p('event.factory.maia')
-	const factoriesRegistryFactory = p('factories-registry.factory.maia')
-	const groupsSchema = p('groups.factory.maia')
-	const identitySchema = p('identity.factory.maia')
-	const inboxFactory = p('inbox.factory.maia')
-	const indexesRegistrySchema = p('indexes-registry.factory.maia')
-	const maiaScriptExpressionSchema = p('maia-script-expression.factory.maia')
-	const iconDataSchema = p('icon.factory.maia')
-	const notesDataSchema = p('note.factory.maia')
-	const osRegistrySchema = p('os-registry.factory.maia')
-	const processSchema = p('process.factory.maia')
-	const profileDataSchema = p('profile.factory.maia')
-	const sparkDataSchema = p('spark.factory.maia')
-	const sparksRegistrySchema = p('sparks-registry.factory.maia')
-	const styleSchema = p('style.factory.maia')
-	const todosDataSchema = p('todo.factory.maia')
-	const vibeSchema = p('vibe.factory.maia')
-	const vibesRegistrySchema = p('vibes-registry.factory.maia')
-	const viewSchema = p('view.factory.maia')
-	const wasmSchema = p('wasm.factory.maia')
+	const actorSchema = p('actor.factory.json')
+	const capabilitySchema = p('capability.factory.json')
+	const chatDataSchema = p('chat.factory.json')
+	const cobinaryDataSchema = p('cobinary.factory.json')
+	const contextSchema = p('context.factory.json')
+	const cotextSchema = p('cotext.factory.json')
+	const eventFactory = p('event.factory.json')
+	const factoriesRegistryFactory = p('factories-registry.factory.json')
+	const groupsSchema = p('groups.factory.json')
+	const identitySchema = p('identity.factory.json')
+	const inboxFactory = p('inbox.factory.json')
+	const indexesRegistrySchema = p('indexes-registry.factory.json')
+	const maiaScriptExpressionSchema = p('maia-script-expression.factory.json')
+	const iconDataSchema = p('icon.factory.json')
+	const notesDataSchema = p('note.factory.json')
+	const osRegistrySchema = p('os-registry.factory.json')
+	const processSchema = p('process.factory.json')
+	const profileDataSchema = p('profile.factory.json')
+	const sparkDataSchema = p('spark.factory.json')
+	const sparksRegistrySchema = p('sparks-registry.factory.json')
+	const styleSchema = p('style.factory.json')
+	const todosDataSchema = p('todo.factory.json')
+	const vibeSchema = p('vibe.factory.json')
+	const vibesRegistrySchema = p('vibes-registry.factory.json')
+	const viewSchema = p('view.factory.json')
+	const wasmSchema = p('wasm.factory.json')
 
 	return {
 		actor: actorSchema,
@@ -121,7 +121,10 @@ async function loadRawByBasename() {
 			return await r.json()
 		}
 	}
-	const { FACTORY_SCHEMAS } = await import('@MaiaOS/universe/generated/registry.js')
+	const { FACTORY_SCHEMAS } = await import(
+		new URL('../../universe/src/avens/maia/migrations/002-factories/generated.js', import.meta.url)
+			.href
+	)
 	return FACTORY_SCHEMAS
 }
 
@@ -132,20 +135,20 @@ export async function ensureFactoriesLoaded() {
 }
 
 /**
- * Resolve short stem (e.g. `note` → `note.factory.maia`) when not a full basename.
+ * Resolve short stem (e.g. `note` → `note.factory.json`) when not a full basename.
  * @param {string} rest
  */
 function basenameFromFactoryRef(rest) {
-	if (rest.endsWith('.factory.maia')) return rest
+	if (rest.endsWith('.factory.json')) return rest
 	const map = {
-		actor: 'actor.factory.maia',
-		note: 'note.factory.maia',
-		todo: 'todo.factory.maia',
-		icon: 'icon.factory.maia',
-		vibe: 'vibe.factory.maia',
-		view: 'view.factory.maia',
+		actor: 'actor.factory.json',
+		note: 'note.factory.json',
+		todo: 'todo.factory.json',
+		icon: 'icon.factory.json',
+		vibe: 'vibe.factory.json',
+		view: 'view.factory.json',
 	}
-	return map[rest] ?? `${rest}.factory.maia`
+	return map[rest] ?? `${rest}.factory.json`
 }
 
 export function getFactory(type) {
@@ -155,7 +158,7 @@ export function getFactory(type) {
 	if (type.startsWith('°maia/factory/')) {
 		let rest = type.slice('°maia/factory/'.length)
 		rest = basenameFromFactoryRef(rest)
-		if (!rest.endsWith('.factory.maia')) return null
+		if (!rest.endsWith('.factory.json')) return null
 		const regKey = FACTORY_BASENAME_TO_REGISTRY_KEY[rest]
 		return regKey ? (FACTORIES[regKey] ?? null) : null
 	}

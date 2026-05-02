@@ -1,0 +1,36 @@
+{
+	"$factory": "°maia/factory/context.factory.json",
+	"title": "Daily Focus",
+	"tabs": [
+		{
+			"id": "list",
+			"label": "List",
+			"actor": "@list"
+		},
+		{
+			"id": "placeholder",
+			"label": "Soon",
+			"actor": "@placeholder"
+		}
+	],
+	"viewMode": "list",
+	"currentView": "@list",
+	"tabsWithActive": [
+		{
+			"id": "list",
+			"label": "List",
+			"actor": "@list",
+			"isActive": true
+		},
+		{
+			"id": "placeholder",
+			"label": "Soon",
+			"actor": "@placeholder",
+			"isActive": false
+		}
+	],
+	"@actors": {
+		"list": "°maia/views/list/actor.json",
+		"placeholder": "°maia/views/placeholder/actor.json"
+	}
+}

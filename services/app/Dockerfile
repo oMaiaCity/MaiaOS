@@ -22,7 +22,7 @@ ENV HUSKY=0
 RUN bun install
 # GIT_SHA must change per commit so remote BuildKit cannot reuse a stale distros bundle layer
 ARG GIT_SHA=unknown
-RUN echo "GIT_SHA=${GIT_SHA}" && bun run universe:registry && bun run distros:build
+RUN echo "GIT_SHA=${GIT_SHA}" && bun run migrate:registry && bun run distros:build
 
 # Generate favicons (sync-assets runs inside build.js, outputs to dist/brand)
 RUN bun scripts/generate-favicons.js

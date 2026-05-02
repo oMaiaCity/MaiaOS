@@ -1,0 +1,22 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/views/logs/interface.json",
+	"description": "Logs view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"RETRY": {
+			"type": "object",
+			"description": "Retry",
+			"properties": {},
+			"additionalProperties": false
+		},
+		"DISMISS": {
+			"type": "object",
+			"description": "Dismiss",
+			"properties": {},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

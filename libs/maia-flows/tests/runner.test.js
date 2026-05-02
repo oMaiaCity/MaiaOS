@@ -10,7 +10,6 @@ function makeCtx(allowApply) {
 			serverAccountId: 'co_zsrv_________________',
 			guardianAccountId: null,
 			maiaName: 'Aven Maia',
-			seedVibes: 'all',
 		},
 		allowApply,
 	})

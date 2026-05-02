@@ -1,0 +1,9 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"type": "service",
+	"process": "°maia/sparks/intent/intent.process.json",
+	"view": "°maia/sparks/intent/intent.view.json",
+	"context": "°maia/sparks/intent/intent.context.json",
+	"brand": "°maia/brand/maiacity.style.json",
+	"inbox": "°maia/sparks/intent/inbox.json"
+}

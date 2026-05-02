@@ -141,7 +141,7 @@ export async function determineCotypeAndFlag(peer, schema, data) {
 			const schemaContent = peer.getCurrentContent(schemaCore)
 			if (schemaContent?.get) {
 				const title = schemaContent.get('title')
-				if (title === '°maia/factory/meta.factory.maia') {
+				if (title === '°maia/factory/meta.factory.json') {
 					return { cotype: 'comap', isSchemaDefinition: true }
 				}
 
@@ -153,7 +153,7 @@ export async function determineCotypeAndFlag(peer, schema, data) {
 				if (cotype && typeof cotype === 'string') {
 					if (cotype === 'cotext' || cotype === 'coplaintext') {
 						throw new Error(
-							`[MaiaDB] Schema ${schema} specifies cotext or coplaintext, which are not supported. Use colist with °maia/factory/cotext.factory.maia for plaintext.`,
+							`[MaiaDB] Schema ${schema} specifies cotext or coplaintext, which are not supported. Use colist with °maia/factory/cotext.factory.json for plaintext.`,
 						)
 					}
 					return { cotype, isSchemaDefinition: false }
@@ -167,7 +167,7 @@ export async function determineCotypeAndFlag(peer, schema, data) {
 	}
 	if (typeof data === 'string') {
 		throw new Error(
-			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String is not a valid CoValue type. Use CoMap or colist with °maia/factory/cotext.factory.maia for plaintext.`,
+			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String is not a valid CoValue type. Use CoMap or colist with °maia/factory/cotext.factory.json for plaintext.`,
 		)
 	}
 	if (typeof data === 'object' && data !== null) {

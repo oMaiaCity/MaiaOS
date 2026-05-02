@@ -7,6 +7,7 @@ import { ensureCoValueLoaded } from './collection-helpers.js'
 import { deepResolveCoValue } from './deep-resolution.js'
 import { applyMapTransform } from './map-transform.js'
 import {
+	alignQueryFactoryCoIdWithSparkOsInfra,
 	debugLog,
 	ensureDerivedLifecycle,
 	getMapDependencyCoIds,
@@ -320,6 +321,14 @@ export async function createUnifiedStore(peer, contextStore, options = {}) {
 						}
 						if (!factoryCoId.startsWith('co_z')) continue
 					}
+
+					factoryCoId = await alignQueryFactoryCoIdWithSparkOsInfra(
+						peer,
+						factoryCoId,
+						universalRead,
+						timeoutMs,
+					)
+
 					if (factoryCoId && typeof factoryCoId === 'string' && factoryCoId.startsWith('co_z')) {
 						if (filterChanged || !existingStore) {
 							if (existingStore?._queryUnsubscribe) {

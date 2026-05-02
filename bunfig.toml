@@ -1,4 +1,0 @@
-# Root Bun config - applies to app, sync, and libs
-# .maia files treated as JSON (required for @MaiaOS/universe imports)
-[loader]
-".maia" = "json"

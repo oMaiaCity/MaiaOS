@@ -10,7 +10,7 @@ import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
 import { matchesFilter } from './filter-helpers.js'
 import { readAllCoValues } from './read-all-covalues.js'
 import { readCollection } from './read-collection.js'
-import { resolveSchemaLazy } from './read-helpers.js'
+import { alignQueryFactoryCoIdWithSparkOsInfra, resolveSchemaLazy } from './read-helpers.js'
 import { readSingleCoValue, readSparksFromAccount } from './read-single-and-sparks.js'
 
 /**
@@ -104,14 +104,22 @@ export async function read(
 	// Collection read (by schema)
 	if (schema) {
 		const sparkSchemaCoId = peer.infra?.dataSpark
-		const resolvedSchema =
+		let resolvedSchema =
 			typeof schema === 'string' && schema.startsWith('co_z')
 				? schema
 				: await resolveSchemaLazy(peer, schema, { returnType: 'coId' })
+		if (typeof resolvedSchema === 'string' && resolvedSchema.startsWith('co_z')) {
+			resolvedSchema = await alignQueryFactoryCoIdWithSparkOsInfra(
+				peer,
+				resolvedSchema,
+				readOptions.universalRead,
+				timeoutMs,
+			)
+		}
 		if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
 			return readSparksFromAccount(peer, readOptions)
 		}
-		return readCollection(peer, schema, filter, readOptions)
+		return readCollection(peer, resolvedSchema, filter, readOptions)
 	}
 
 	// All CoValues read (no schema) - returns array of all CoValues

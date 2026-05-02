@@ -41,8 +41,8 @@ Implemented in repo (re-run Sentrux when CLI available):
 - **`libs/maia-db/src/primitives/`** — `reactive-store`, `co-cache`, `ensure-covalue-core`, `data-extraction`, `factory-registry` (→ validation), `capability-grant-ttl`; cojson code imports these via `../../primitives/...`.
 - **`libs/maia-db/src/modules/{crud,groups,spark,indexing}.js`** — grouped barrels (no cross-imports between module files); implementation stays under `cojson/` until any full single-file merge.
 - **`libs/maia-db/src/index.js`** — thin facade: `@MaiaOS/peer` + `export *` from modules + `profile-bootstrap` + `generateRegistryName`.
-- **Maia-domain naming** — `getFactory` / `hasFactory` / `resolveFactoryFromCoValue`; **`builtin-factories.data.js`**; seed **`sortFactoriesByDependency`**; `clearLocalPgliteAndFsBlob` from **`@MaiaOS/aven-os/server`** so sync keeps a single `@MaiaOS/*` workspace dep.
-- **CI** — [`scripts/lint-import-invariants.mjs`](../scripts/lint-import-invariants.mjs), [`scripts/lint-naming-invariants.mjs`](../scripts/lint-naming-invariants.mjs) in `check:ci`; Biome ignores vendored **`libs/aven-os/output`**.
+- **Maia-domain naming** — `getFactory` / `hasFactory` / `resolveFactoryFromCoValue`; **`builtin-factories.data.js`**; seed **`sortFactoriesByDependency`**; `clearLocalPgliteAndFsBlob` from **`@AvenOS/kernel/server`** so sync keeps OS surface in one workspace package.
+- **CI** — [`scripts/lint-import-invariants.mjs`](../scripts/lint-import-invariants.mjs), [`scripts/lint-naming-invariants.mjs`](../scripts/lint-naming-invariants.mjs) in `check:ci`; Biome ignores vendored **`libs/kernel/output`**.
 - **Verification** — `bun test` (db, validation, engine, seed); **`bun run check:ci`** passes.
 
 ## Snapshot (2026-04-30 — Sentrux depth execution pass)
@@ -57,18 +57,18 @@ Implemented in repo (re-run Sentrux when CLI available):
 
 **Historical baselines:** quality_signal **4926** (older); **5537** (pre–depth-execution doc row).
 
-### validation → universe tail (Phase 3 decision)
+### validation ↔ migrate identity (Phase 3 decision)
 
-**No change:** [`libs/maia-validation/src/identity-from-maia-path.js`](libs/maia-validation/src/identity-from-maia-path.js) depends on universe helpers for canonical Maia path / nanoid behavior. Splitting nanoid-only bits into validation would duplicate the universe contract; **accepted** as an intentional layering cost for factory and schema identity.
+**No change:** [`libs/maia-validation/src/identity-from-maia-path.js`](libs/maia-validation/src/identity-from-maia-path.js) implements Maia path / nanoid behaviour aligned with [`libs/universe/src/avens/maia/helpers/identity-from-maia-path.js`](libs/universe/src/avens/maia/helpers/identity-from-maia-path.js). Authoring JSON is under **`libs/universe/src/avens/maia/seed/`** with **`bun run migrate:registry`** for generated registry slices.
 
 ## Refactors — depth execution (2026-04-30)
 
 1. **App / db-view** — Narrow `@MaiaOS/runtime` where possible: [`db-view.js`](../services/app/db-view.js) uses `@MaiaOS/db` + `@MaiaOS/logs`; [`dashboard.js`](../services/app/dashboard.js) same pattern; [`capabilities.js`](../services/app/db-view/capabilities.js) / [`members.js`](../services/app/db-view/members.js) import db + logs; [`cobinary-preview.js`](../services/app/db-view/cobinary-preview.js) → `@MaiaOS/logs`; [`sync-inspector.js`](../services/app/db-view/sync-inspector.js) → `@MaiaOS/peer` for sync URL; [`maia-game-mount.js`](../services/app/maia-game-mount.js) → `@MaiaOS/logs` for `createLogger`.
-2. **Chat session path** — [`chat-session-ids.js`](../services/app/chat-session-ids.js): `resolveChatVibeCoId` / `findSessionChatIntentActorId` with `@MaiaOS/validation/identity-from-maia-path` only (no runtime barrel on dashboard import path). [`maia-ai-global.js`](../services/app/maia-ai-global.js): `ACTOR_NANOID_TO_EXECUTABLE_KEY` from `@MaiaOS/universe/generated/registry.js`; re-exports chat helpers from `chat-session-ids.js`.
+2. **Chat session path** — [`chat-session-ids.js`](../services/app/chat-session-ids.js): `resolveChatVibeCoId` / `findSessionChatIntentActorId` with `@MaiaOS/validation/identity-from-maia-path` only (no runtime barrel on dashboard import path). [`maia-ai-global.js`](../services/app/maia-ai-global.js) re-exports those helpers (no static import of a generated actor registry).
 3. **`@MaiaOS/db` cotypes** — [`coList.js`](../libs/maia-db/src/cojson/cotypes/coList.js) / [`coMap.js`](../libs/maia-db/src/cojson/cotypes/coMap.js): **`import()`** `@MaiaOS/validation/validation.helper` at validate time to drop static **`validation.helper` → engine** from the load-time graph.
 4. **Index warm-load** — [`factory-index-warm-load.js`](../libs/maia-db/src/cojson/indexing/factory-index-warm-load.js): `createLogger` from `@MaiaOS/logs/subsystem-logger` (shallow log path, same idea as `ensure-covalue-core`).
 
-**`services/app/package.json`:** direct `workspace:*` on `@MaiaOS/db`, `@MaiaOS/logs`, `@MaiaOS/peer`, `@MaiaOS/universe`, `@MaiaOS/validation` where used above.
+**`services/app/package.json`:** workspace deps for the SPA are **`@MaiaOS/game`** and **`@AvenOS/kernel`** (narrow shell; DB/peer live in bundled client from distros where needed).
 
 ## Refactors captured in this audit
 
@@ -93,7 +93,7 @@ Implemented in repo (re-run Sentrux when CLI available):
 
 ## Package cycle removed (historical)
 
-- **`@MaiaOS/runtime` ↔ `@MaiaOS/universe`:** Universe imports `readStore` from **`@MaiaOS/db/resolve-helpers`**.
+- **Historical — resolver helpers:** Spark migrate content and runtime read paths use **`readStore`** from **`@MaiaOS/db/resolve-helpers`** (`@MaiaOS/universe` removed 2026-05).
 
 ## Next actions
 

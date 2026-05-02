@@ -1,0 +1,12 @@
+{
+	"$factory": "°maia/factory/process.factory.json",
+	"handlers": {
+		"SELECT_ITEM": [
+			{
+				"ctx": {
+					"selectedItem": "$$item"
+				}
+			}
+		]
+	}
+}

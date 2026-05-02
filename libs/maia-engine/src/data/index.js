@@ -488,17 +488,6 @@ async function deleteOp(peer, dataEngine, params) {
 	return createSuccessResult(result, { op: 'delete' })
 }
 
-async function seedOp(peer, params) {
-	const { configs, schemas, data, forceFreshSeed } = params
-	if (!configs) throw new Error('[SeedOperation] Configs required')
-	if (!schemas) throw new Error('[SeedOperation] Schemas required')
-	if (!forceFreshSeed) {
-		throw new Error('[SeedOperation] forceFreshSeed is required')
-	}
-	const result = await peer.seed(configs, schemas, data || {}, { forceFreshSeed: true })
-	return createSuccessResult(result, { op: 'seed' })
-}
-
 async function factoryOp(peer, _dataEngine, params) {
 	const { coId, fromCoValue } = params
 	const paramCount = [coId, fromCoValue].filter(Boolean).length
@@ -1032,7 +1021,6 @@ export class DataEngine {
 					create: (p) => createOp(peer, this, p),
 					update: (p) => updateOp(peer, this, ev, p),
 					delete: (p) => deleteOp(peer, this, p),
-					seed: (p) => seedOp(peer, p),
 					factory: (p) => factoryOp(peer, this, p),
 					append: (p) => appendOp(peer, this, p),
 					spliceCoList: (p) => spliceCoListOp(peer, this, p),
@@ -1103,7 +1091,7 @@ export class DataEngine {
 
 		if (!op) {
 			throw new Error(
-				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|factory|append|push|..."}',
+				'[DataEngine] Operation required: {op: "read|create|update|delete|factory|append|push|..."}',
 			)
 		}
 
@@ -1121,7 +1109,6 @@ export class DataEngine {
 			'spliceCoList',
 			'uploadBinary',
 			'uploadToCoBinary',
-			'seed',
 			'addSparkMember',
 			'removeSparkMember',
 			...COLIST_WRITE_OP_NAMES,

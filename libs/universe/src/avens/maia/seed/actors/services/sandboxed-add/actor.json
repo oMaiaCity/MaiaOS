@@ -1,0 +1,7 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"interface": "°maia/services/sandboxed-add/interface.json",
+	"process": "°maia/services/sandboxed-add/process.json",
+	"inbox": "°maia/services/sandboxed-add/inbox.json",
+	"wasm": "°maia/services/sandboxed-add/wasm.json"
+}

@@ -2,7 +2,7 @@
  * Maia AI Global — RedPill LLM chat via Chat vibe (messages actor). FAB + modal with text input.
  */
 
-import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/aven-os/client'
+import { executableKeyFromMaiaPath } from '@AvenOS/kernel/client'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './chat-session-ids.js'
 import { escapeHtml } from './utils.js'
 
@@ -15,8 +15,8 @@ const BELL_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg"
 const SEND_ICON = `<svg class="maia-ai-send-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill="currentColor" d="M3 20V4l18 8z"/></svg>`
 
 function execKeyFromActorCfg(cfg) {
-	if (!cfg || typeof cfg !== 'object' || typeof cfg.$nanoid !== 'string') return ''
-	return ACTOR_NANOID_TO_EXECUTABLE_KEY[cfg.$nanoid] ?? ''
+	if (!cfg || typeof cfg !== 'object' || typeof cfg.$label !== 'string') return ''
+	return executableKeyFromMaiaPath(cfg.$label) ?? ''
 }
 
 let maiaRef = null

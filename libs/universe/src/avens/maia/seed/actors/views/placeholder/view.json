@@ -1,0 +1,14 @@
+{
+	"$factory": "°maia/factory/view.factory.json",
+	"content": {
+		"tag": "div",
+		"class": "placeholder",
+		"children": [
+			{
+				"tag": "p",
+				"class": "placeholder-text",
+				"text": "$message"
+			}
+		]
+	}
+}

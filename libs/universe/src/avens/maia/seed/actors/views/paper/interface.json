@@ -1,0 +1,22 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/views/paper/interface.json",
+	"description": "Paper view - receives SELECT_NOTE from layout",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SELECT_NOTE": {
+			"type": "object",
+			"description": "Load note into detail view",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Co-id of the selected note"
+				}
+			},
+			"required": ["id"],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

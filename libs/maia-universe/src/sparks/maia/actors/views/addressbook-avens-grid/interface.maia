@@ -1,9 +1,0 @@
-{
-	"$factory": "°maia/factory/meta.factory.maia",
-	"title": "°maia/views/addressbook-avens-grid/interface.maia",
-	"description": "Avens grid - display only",
-	"cotype": "comap",
-	"indexing": true,
-	"properties": {},
-	"additionalProperties": false
-}

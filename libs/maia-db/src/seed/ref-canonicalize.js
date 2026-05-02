@@ -15,10 +15,10 @@ export async function canonicalizePayloadRefs(value, { resolveRef }) {
 		if (
 			value === '@metaSchema' ||
 			value.startsWith('°') ||
-			(value.startsWith('maia/factory/') && value.includes('.factory.maia'))
+			(value.startsWith('maia/factory/') && value.includes('.factory.json'))
 		) {
 			const s =
-				value.startsWith('maia/factory/') && value.includes('.factory.maia') ? `\u00B0${value}` : value
+				value.startsWith('maia/factory/') && value.includes('.factory.json') ? `\u00B0${value}` : value
 			return await resolveRef(s)
 		}
 		return value
@@ -49,10 +49,10 @@ export function canonicalizePayloadRefsSync(value, { resolveRef }) {
 		if (
 			value === '@metaSchema' ||
 			value.startsWith('°') ||
-			(value.startsWith('maia/factory/') && value.includes('.factory.maia'))
+			(value.startsWith('maia/factory/') && value.includes('.factory.json'))
 		) {
 			const s =
-				value.startsWith('maia/factory/') && value.includes('.factory.maia') ? `\u00B0${value}` : value
+				value.startsWith('maia/factory/') && value.includes('.factory.json') ? `\u00B0${value}` : value
 			return resolveRef(s)
 		}
 		return value

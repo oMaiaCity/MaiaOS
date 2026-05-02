@@ -1,0 +1,7 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"context": "°maia/services/todos/context.json",
+	"process": "°maia/services/todos/process.json",
+	"inbox": "°maia/services/todos/inbox.json",
+	"interface": "°maia/services/todos/interface.json"
+}

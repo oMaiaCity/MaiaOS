@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/process.factory.json",
+	"handlers": {
+		"ADD": [
+			{
+				"function": true
+			}
+		]
+	}
+}

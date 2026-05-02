@@ -8,7 +8,7 @@ import {
 	createPerfTracer,
 	resolveAccountCoIdsToProfiles,
 	waitForStoreReady,
-} from '@MaiaOS/aven-os/client'
+} from '@AvenOS/kernel/client'
 import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './chat-session-ids.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'

@@ -1,4 +1,4 @@
-import { getSyncHttpBaseUrl } from '@MaiaOS/aven-os/client'
+import { getSyncHttpBaseUrl } from '@AvenOS/kernel/client'
 
 export const isLocalAppHost =
 	typeof window !== 'undefined' &&

@@ -1,0 +1,18 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/note.factory.json",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"title": {
+			"type": "string",
+			"description": "Note title displayed in the aside list"
+		},
+		"content": {
+			"$co": "°maia/factory/cotext.factory.json",
+			"description": "CoText (colist of graphemes) - collaborative plaintext"
+		}
+	},
+	"required": ["content"],
+	"additionalProperties": false
+}

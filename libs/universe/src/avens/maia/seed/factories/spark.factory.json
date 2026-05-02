@@ -1,0 +1,19 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/spark.factory.json",
+	"description": "Spark CoMap. Guardian (admin) group is spark.os.groups.guardian.",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["name"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"description": "Spark name e.g. °maia"
+		},
+		"os": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "OS CoMap - contains factories, indexes, groups (guardian, publicReaders), vibes."
+		}
+	}
+}

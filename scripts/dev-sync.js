@@ -20,12 +20,12 @@ const logger = createLogger('sync')
 
 ;(async () => {
 	try {
-		execSync('bun scripts/generate-maia-universe-registry.mjs', {
+		execSync('bun scripts/generate-migrate-registries.mjs', {
 			cwd: rootDir,
 			stdio: 'pipe',
 			env: process.env,
 		})
-		logger.log('[registry] Universe registry generated')
+		logger.log('[registry] Migrate registries generated')
 	} catch (e) {
 		logger.error(`[registry] Generation failed: ${e.stderr?.toString().trim() || e.message}`)
 		process.exit(1)

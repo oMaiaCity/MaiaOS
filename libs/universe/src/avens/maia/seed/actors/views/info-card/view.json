@@ -1,0 +1,32 @@
+{
+	"$factory": "°maia/factory/view.factory.json",
+	"content": {
+		"tag": "div",
+		"class": "info-card",
+		"attrs": {
+			"data": {
+				"visible": "$visible",
+				"type": "$type"
+			}
+		},
+		"children": [
+			{
+				"tag": "strong",
+				"text": "$label"
+			},
+			{
+				"text": "$message"
+			},
+			{
+				"tag": "button",
+				"class": "button",
+				"text": "$dismissButtonText",
+				"$on": {
+					"click": {
+						"send": "DISMISS"
+					}
+				}
+			}
+		]
+	}
+}

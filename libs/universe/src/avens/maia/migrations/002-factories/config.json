@@ -1,0 +1,6 @@
+{
+	"id": "002-factories",
+	"title": "Meta-factory + factory schema rows",
+	"enabled": true,
+	"requires": ["001-genesis"]
+}

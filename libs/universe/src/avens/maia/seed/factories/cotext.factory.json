@@ -1,0 +1,12 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/cotext.factory.json",
+	"description": "CoText - exclusively colist (ordered graphemes). Never comap or cobinary.",
+	"cotype": "colist",
+	"indexing": true,
+	"items": {
+		"type": "string",
+		"format": "grapheme",
+		"description": "Single grapheme cluster (Unicode extended grapheme cluster)"
+	}
+}

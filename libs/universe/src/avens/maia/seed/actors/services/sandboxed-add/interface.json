@@ -1,0 +1,23 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/services/sandboxed-add/interface.json",
+	"description": "Add two numbers (sandboxed QuickJS)",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"ADD": {
+			"type": "object",
+			"description": "Add two numbers",
+			"properties": {
+				"a": {
+					"description": "First number (string or number from HTML input)"
+				},
+				"b": {
+					"description": "Second number (string or number from HTML input)"
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

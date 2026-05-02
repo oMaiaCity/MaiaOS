@@ -1,0 +1,6 @@
+{
+	"id": "005-vibes",
+	"title": "Vibes registry rows + cotext/note data buckets",
+	"enabled": true,
+	"requires": ["004-actors"]
+}

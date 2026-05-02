@@ -1,6 +1,6 @@
 /**
  * Universal co-id resolution and context loading (DataEngine peer + execute).
- * Lives in @MaiaOS/db so @MaiaOS/universe spark code can use readStore without depending on @MaiaOS/engine.
+ * Lives in @MaiaOS/db so spark migrate content and authoring can use readStore without depending on @MaiaOS/engine.
  */
 
 import { ensureCoValueLoaded } from './crud/collection-helpers.js'

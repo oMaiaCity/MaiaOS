@@ -1,0 +1,6 @@
+{
+	"id": "003-sparks",
+	"title": "Sparks infra slots + definition catalog",
+	"enabled": true,
+	"requires": ["002-factories"]
+}

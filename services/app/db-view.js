@@ -11,7 +11,7 @@ import {
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
 	resolveMaiaLoggingEnv,
-} from '@MaiaOS/aven-os/client'
+} from '@AvenOS/kernel/client'
 import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 import { hydrateCapabilitiesView } from './db-view/capabilities.js'

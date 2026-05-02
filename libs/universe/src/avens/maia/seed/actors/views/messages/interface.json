@@ -1,0 +1,22 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/views/messages/interface.json",
+	"description": "Messages view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SEND_MESSAGE": {
+			"type": "object",
+			"description": "Send message",
+			"properties": {
+				"inputText": {
+					"type": "string",
+					"description": "Message content"
+				}
+			},
+			"required": ["inputText"],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

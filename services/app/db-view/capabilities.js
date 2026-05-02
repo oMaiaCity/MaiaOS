@@ -7,7 +7,7 @@ import {
 	debugWarn,
 	loadCapabilitiesGrants,
 	resolveAccountCoIdsToProfiles,
-} from '@MaiaOS/aven-os/client'
+} from '@AvenOS/kernel/client'
 import { escapeHtml } from '../utils.js'
 import { buildCapabilitiesGrantRowsHtml } from './capabilities-shared.js'
 import { hydrateMembersView } from './members.js'

@@ -1,0 +1,15 @@
+{
+	"$factory": "°maia/factory/process.factory.json",
+	"handlers": {
+		"UPDATE_PAPER": [
+			{
+				"function": true
+			}
+		],
+		"UPDATE_CO_TEXT": [
+			{
+				"function": true
+			}
+		]
+	}
+}

@@ -1,0 +1,34 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/os-registry.factory.json",
+	"description": "OS CoMap - contains groups, factories, indexes. Stored in spark.os",
+	"cotype": "comap",
+	"indexing": false,
+	"properties": {
+		"groups": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Groups CoMap co-id (guardian, publicReaders)"
+		},
+		"capabilities": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "CoStream of Capability CoMap co-ids (UCAN-aligned grants)"
+		},
+		"factories": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Schemata registry CoMap co-id"
+		},
+		"indexes": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Indexes registry CoMap co-id"
+		},
+		"vibes": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Vibes registry CoMap co-id (vibe key -> vibe co-id)"
+		}
+	}
+}

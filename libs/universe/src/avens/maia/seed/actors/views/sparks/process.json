@@ -1,0 +1,52 @@
+{
+	"$factory": "°maia/factory/process.factory.json",
+	"handlers": {
+		"FORM_SUBMIT": [
+			{
+				"tell": {
+					"target": "°maia/services/spark/actor.json",
+					"type": "CREATE_SPARK",
+					"payload": {
+						"name": "$$value"
+					}
+				}
+			}
+		],
+		"SELECT_SPARK": [
+			{
+				"ctx": {
+					"selectedSparkId": "$$id"
+				}
+			},
+			{
+				"tell": {
+					"target": "°maia/views/detail/actor.json",
+					"type": "LOAD_ACTOR",
+					"payload": {
+						"id": "$$id"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"tell": {
+					"target": "°maia/views/input/for-sparks.actor.json",
+					"type": "SUCCESS",
+					"payload": {}
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"tell": {
+					"target": "°maia/views/input/for-sparks.actor.json",
+					"type": "ERROR",
+					"payload": {
+						"errors": "$$errors"
+					}
+				}
+			}
+		]
+	}
+}

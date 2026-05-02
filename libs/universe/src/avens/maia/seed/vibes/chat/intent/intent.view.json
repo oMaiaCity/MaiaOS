@@ -1,0 +1,8 @@
+{
+	"$factory": "°maia/factory/view.factory.json",
+	"content": {
+		"tag": "div",
+		"class": "chat-container",
+		"$slot": "$layout"
+	}
+}

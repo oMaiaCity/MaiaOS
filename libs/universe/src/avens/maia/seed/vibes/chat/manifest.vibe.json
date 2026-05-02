@@ -1,0 +1,24 @@
+{
+	"$factory": "°maia/factory/vibe.factory.json",
+	"name": "Chat",
+	"description": "CTO-level AI assistant for MaiaOS codebase",
+	"icon": "°maia/data/icons.data.json[dw5wMME7GWnX]",
+	"actor": "°maia/chat/intent/intent.actor.json",
+	"runtime": ["browser"],
+	"seedData": {
+		"chat": {
+			"kind": "emptyArray"
+		}
+	},
+	"dependencies": [
+		"°maia/chat/intent/intent.actor.json",
+		"°maia/views/layout-chat/actor.json",
+		"°maia/views/messages/actor.json",
+		"°maia/views/paper/actor.json",
+		"°maia/services/messages/actor.json",
+		"°maia/services/paper/actor.json",
+		"°maia/services/todos/actor.json",
+		"°maia/services/db/actor.json",
+		"°maia/services/ai/actor.json"
+	]
+}

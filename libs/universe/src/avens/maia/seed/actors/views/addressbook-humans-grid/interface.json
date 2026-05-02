@@ -1,0 +1,9 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/views/addressbook-humans-grid/interface.json",
+	"description": "Humans grid - display only",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {},
+	"additionalProperties": false
+}

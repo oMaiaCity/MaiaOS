@@ -1,10 +1,2 @@
-# Bun config for maia dev (bun index.html)
-# Path resolution via jsconfig.json
-# .maia files treated as JSON (inlined, not emitted)
-[loader]
-".maia" = "json"
-
-# Bun.serve HTML/HMR route bundling must load this plugin; global `plugin()` in JS is not
-# applied to the HTML import graph, so .maia can otherwise resolve as non-object defaults.
-[serve.static]
-plugins = ["./register-dev-bun-loaders.js"]
+# Bun config for maia dev (Bun HTML bundler + HMR)
+# Spark factory JSON lives under `libs/universe/src/avens/maia/seed/factories/` (no extra loader).

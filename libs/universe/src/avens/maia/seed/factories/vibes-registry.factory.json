@@ -1,0 +1,12 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/vibes-registry.factory.json",
+	"description": "Vibes registry CoMap - vibe key -> vibe co-id. Stored in spark.os.vibes",
+	"cotype": "comap",
+	"indexing": false,
+	"additionalProperties": {
+		"type": "string",
+		"pattern": "^co_z[a-zA-Z0-9]+$",
+		"description": "Vibe key -> vibe CoMap co-id"
+	}
+}

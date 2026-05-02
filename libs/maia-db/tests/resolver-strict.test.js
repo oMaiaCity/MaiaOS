@@ -8,7 +8,7 @@ describe('resolve() strict-only', () => {
 			account: { get: () => null },
 		}
 		await expect(
-			resolve(peer, '°maia/factory/todos.factory.maia', { returnType: 'coId' }),
+			resolve(peer, '°maia/factory/todos.factory.json', { returnType: 'coId' }),
 		).rejects.toThrow(/Runtime resolve requires co_z co-id/)
 	})
 })

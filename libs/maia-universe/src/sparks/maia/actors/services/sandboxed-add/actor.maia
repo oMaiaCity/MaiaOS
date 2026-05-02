@@ -1,7 +1,0 @@
-{
-	"$factory": "°maia/factory/actor.factory.maia",
-	"interface": "°maia/services/sandboxed-add/interface.maia",
-	"process": "°maia/services/sandboxed-add/process.maia",
-	"inbox": "°maia/services/sandboxed-add/inbox.maia",
-	"wasm": "°maia/services/sandboxed-add/wasm.maia"
-}

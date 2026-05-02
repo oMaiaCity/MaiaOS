@@ -1,0 +1,69 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/actor.factory.json",
+	"description": "Pure declarative actor specification",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"$label": {
+			"$ref": "#/$defs/registryLabel"
+		},
+		"context": {
+			"$co": "°maia/factory/context.factory.json",
+			"description": "Co-id reference to context definition"
+		},
+		"view": {
+			"$co": "°maia/factory/view.factory.json",
+			"description": "Co-id reference to view definition"
+		},
+		"process": {
+			"$co": "°maia/factory/process.factory.json",
+			"description": "Co-id reference to process config (GenServer-style handlers)"
+		},
+		"brand": {
+			"$co": "°maia/factory/style.factory.json",
+			"description": "Co-id reference to brand style definition (uses style schema)"
+		},
+		"style": {
+			"$co": "°maia/factory/style.factory.json",
+			"description": "Co-id reference to local style definition"
+		},
+		"inbox": {
+			"$co": "°maia/factory/inbox.factory.json",
+			"description": "Co-id reference to message inbox costream (append-only message feed)"
+		},
+		"interface": {
+			"$co": "°maia/factory/meta.factory.json",
+			"description": "Co-id reference to interface schema (standard Maia schema whose properties define accepted events with typed payloads). Every actor with an interface is LLM-callable by default."
+		},
+		"wasm": {
+			"description": "WASM-based execution. $co ref to wasm config, or inline { lang, code }.",
+			"oneOf": [
+				{
+					"type": "string",
+					"pattern": "^co_z[a-zA-Z0-9]+$"
+				},
+				{
+					"type": "object",
+					"properties": {
+						"lang": {
+							"type": "string",
+							"enum": ["js"]
+						},
+						"code": {
+							"$co": "°maia/factory/cotext.factory.json"
+						}
+					},
+					"required": ["lang", "code"],
+					"additionalProperties": false
+				}
+			]
+		}
+	},
+	"$defs": {
+		"registryLabel": {
+			"type": "string",
+			"description": "Opaque human-readable registry path (typically equals pre-seed $id). Never ref-walked; never resolved as co-id. Native module path for getActor is derived at runtime from $label, not stored."
+		}
+	}
+}

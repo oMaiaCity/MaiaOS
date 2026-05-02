@@ -135,9 +135,9 @@ Bun.serve({
 				headers: { 'Content-Type': 'model/gltf-binary', ...COOP_COEP },
 			})
 		},
-		// Same file as @MaiaOS/universe/factories/meta.factory.maia — for ValidationEngine when Bun HMR leaves dynamic import empty
-		'/__maia_dev/factory/meta.factory.maia': () => {
-			const filePath = join(repoRoot, 'libs/maia-universe/src/sparks/maia/factories/meta.factory.maia')
+		// Canonical migrate sparks meta.factory.json — for ValidationEngine when Bun HMR leaves dynamic import empty
+		'/__maia_dev/factory/meta.factory.json': () => {
+			const filePath = join(repoRoot, 'libs/universe/src/avens/maia/seed/factories/meta.factory.json')
 			if (!existsSync(filePath) || !statSync(filePath).isFile()) {
 				return new Response('Not found', { status: 404, headers: COOP_COEP })
 			}
@@ -145,15 +145,15 @@ Bun.serve({
 				headers: { 'Content-Type': 'application/json', ...COOP_COEP },
 			})
 		},
-		// All *.factory.maia in universe — for ensureFactoriesLoaded when Bun HMR breaks dynamic imports
+		// All migrate sparks *.factory.json — for ensureFactoriesLoaded when Bun HMR breaks dynamic imports
 		'/__maia_dev/factories.json': () => {
-			const dir = join(repoRoot, 'libs/maia-universe/src/sparks/maia/factories')
+			const dir = join(repoRoot, 'libs/universe/src/avens/maia/seed/factories')
 			if (!existsSync(dir) || !statSync(dir).isDirectory()) {
 				return new Response('Not found', { status: 404, headers: COOP_COEP })
 			}
 			const out = {}
 			for (const name of readdirSync(dir)) {
-				if (!name.endsWith('.factory.maia')) continue
+				if (!name.endsWith('.factory.json')) continue
 				const text = readFileSync(join(dir, name), 'utf8')
 				out[name] = JSON.parse(text)
 			}

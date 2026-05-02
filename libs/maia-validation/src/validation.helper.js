@@ -195,7 +195,7 @@ export async function validateAgainstFactoryOrThrow(schema, data, context = '') 
  * Universal schema loading and validation (single source of truth)
  *
  * - Runtime: `co_z` → resolve(peer) + validateAgainstFactory
- * - Inline only: `AccountFactory` | `ProfileFactory` from builtin-factories (no universe bundle)
+ * - Inline only: `AccountFactory` | `ProfileFactory` from builtin-factories (no separate spark registry bundle in validation)
  *
  * @param {Object} backend - Backend instance (for resolve() API)
  * @param {string} factoryRef - Schema co-id (co_z...) or AccountFactory | ProfileFactory

@@ -38,21 +38,21 @@ Sentrux **`git_stats`** (90-day window) reported very high **single-author ratio
 ### Maia identity and refs
 
 - **Logical refs** use the **`°`** prefix (e.g. `°maia/...`). Instance configs carry **`$label`** (full logical ref string) and **`$nanoid`** (deterministic from the canonical `maia/...` path). There is **no Maia `$id`** on instances—**`$label`** is the single logical id.
-- **Factory refs** in authoring use **`°maia/factory/<name>.factory.maia`** — derived as `maiaFactoryLabel` / `maiaIdentity` in [`libs/maia-universe/src/helpers/identity-from-maia-path.js`](libs/maia-universe/src/helpers/identity-from-maia-path.js) (no manual map). **`$factory`** in `.maia` files uses that shape.
+- **Factory refs** in authoring use **`°maia/factory/<name>.factory.json`** — derived as `maiaFactoryLabel` / `maiaIdentity` in [`libs/universe/src/avens/maia/helpers/identity-from-maia-path.js`](libs/universe/src/avens/maia/helpers/identity-from-maia-path.js) (no manual map). **`$factory`** in `.json` spark schema files uses that shape.
 - **JSON Schema** `"$id": "https://..."` in defs is unrelated to Maia identity.
-- **Registry codegen:** after changing universe `.maia` inventory, run **`bun scripts/generate-maia-universe-registry.mjs`** (updates `libs/maia-universe/src/generated/registry.js`, `SEED_DATA`, `MAIA_SPARK_REGISTRY`).
+- **Registry codegen:** after changing authored `.json` under [`libs/universe/src/avens/maia/seed/`](libs/universe/src/avens/maia/seed/), run **`bun run migrate:registry`** (updates `libs/universe/src/avens/maia/migrations/002-factories/generated.js`, `004-actors/generated.js`, `005-vibes/generated.js`; [`registry-merge.js`](libs/universe/src/avens/maia/helpers/seed/registry-merge.js) unions actor + vibe registries for seeds).
 - **Future sparks:** additional top-level prefixes may follow the same pattern (e.g. `°<spark>/factory/...`); the current universe uses **`°maia/...`** only.
 
 ### Running the dev environment
 
 All commands are documented in root `package.json`. Key commands:
 
-- **`bun dev`** — starts app (4200) and sync (4201) in **parallel** after registry + helpers; the client retries if sync is still warming up
+- **`bun dev`** — starts app (4200) and sync (4201) in **parallel** after `bun run migrate:registry` codegen; the client retries if sync is still warming up
 - **`bun run dev:desktop`** — full stack (`bun dev`) then Tauri macOS window (requires Rust 1.88+, Xcode toolchain for Swift passkey plugin). **`tauri dev` is not fully code-signed like the bundle**; native passkeys (`ASAuthorizationController`) need a **built** `.app` (see below).
 - **`bun run build:desktop`** — production SPA build + Tauri `.app` bundle (signed per `src-tauri/tauri.conf.json`). **Use this build to test passkeys**, then open `services/app/src-tauri/target/release/bundle/macos/Maia City.app` (or run from Finder). Start `bun dev` (or sync only) in another terminal if the UI should talk to local sync.
 - **`bun run build:desktop:debug`** — same as `build:desktop` but `tauri build --debug` (faster Rust compile); signed bundle under `target/debug/bundle/macos/`.
-- **`bun run check:ci`** — lint + format check (Biome + `.maia` format)
-- **`bun test`** — runs `test` in every workspace that defines it (`bun run --workspaces --if-present test`; currently `@MaiaOS/db`)
+- **`bun run check:ci`** — lint + format check (Biome)
+- **`bun run test`** — runs each workspace `test` script **sequentially** via [`scripts/run-workspace-tests.mjs`](scripts/run-workspace-tests.mjs) (avoids `EMFILE` from parallel `bun run --workspaces --if-present test`). Prefer this over **`bun test`** at repo root (`bun test` walks the tree and duplicates work).
 - **`bun run format`** — auto-fix formatting
 
 ### Logging policy
@@ -103,7 +103,7 @@ General tokens (comma-separated): **`perf.all`**, **`perf.game.init`**, **`trace
 ### First-time setup caveats
 
 1. **Generate credentials before first run**: `bun agent:generate` creates `/workspace/.env` with agent + test account credentials.
-2. **Seeding**: `PEER_SYNC_SEED=true` is the **only** env gate for **genesis** (scaffold missing → fail fast until set). When scaffold exists, genesis step skips; unset after one-shot deploy. **Fly / empty DB:** set `PEER_SYNC_SEED=true` for the deploy that should run genesis, then `fly secrets unset PEER_SYNC_SEED --app <sync-app>` — leaving it `true` reruns genesis every boot. **Never** auto-clears Postgres, Neon, or Tigris. **Local dev** (not production, `PEER_SYNC_STORAGE=pglite`, no `BUCKET_NAME`): sync can clear the local PGlite dir + `./binary-bucket`, regenerate secret key dev tester lines in `.env`, then seed — restart the app dev server to pick up new `VITE_AVEN_TEST_*`. Set `PEER_SYNC_STORAGE=pglite` (local) or `postgres` + `PEER_SYNC_DB_URL` (deploy). `SEED_VIBES` defaults to `all` (includes quickjs). Server startup / bootstrap sequences: `@MaiaOS/flows`. **Full reset (remote):** wipe Postgres, PGlite, and/or Tigris manually when needed. Registry changes ship with new deploys; regenerate `libs/maia-universe` registry locally with `bun universe:registry` before commit.
+2. **Seeding**: `PEER_SYNC_SEED=true` is the **only** env gate for applying **@AvenOS/universe** migration steps when the scaffold or a later migration step is missing; unset after one-shot deploy when satisfied. **Fly / empty DB:** set `PEER_SYNC_SEED=true` for the deploy that should run genesis/migrations, then `fly secrets unset PEER_SYNC_SEED --app <sync-app>` — leaving it `true` reruns migration apply every boot. **Never** auto-clears Postgres, Neon, or Tigris. **Local dev** (not production, `PEER_SYNC_STORAGE=pglite`, no `BUCKET_NAME`): sync can clear the local PGlite dir + `./binary-bucket`, regenerate secret key dev tester lines in `.env`, then seed — restart the app dev server to pick up new `VITE_AVEN_TEST_*`. Set `PEER_SYNC_STORAGE=pglite` (local) or `postgres` + `PEER_SYNC_DB_URL` (deploy). Optional actor/vibe steps are gated by `enabled` in each `libs/universe/src/avens/maia/migrations/*/config.json`. Server startup / bootstrap sequences: `@MaiaOS/flows`. **Full reset (remote):** wipe Postgres, PGlite, and/or Tigris manually when needed. After changing migrate `.maia` sources, run `bun run migrate:registry` before commit.
 3. **Secret key dev sign-in**: With `VITE_AVEN_TEST_MODE=true` in `.env`, the sign-in page shows a **Secret key (dev)** button — same browser app as passkey sign-in, but uses pre-provisioned credentials from `.env` instead of WebAuthn. (Legacy env prefix `VITE_AVEN_*`.)
 4. **Guardian timeout on first run**: The sync server logs `Failed to add guardian: Timeout waiting for CoValue...` on first seed. This is expected — the test account isn't an existing peer yet. It does not block functionality.
 5. **RED_PILL_API_KEY**: Without this key, the LLM chat proxy (`/api/v0/llm/chat`) returns 500. The rest of the app works fine without it.

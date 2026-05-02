@@ -1,0 +1,19 @@
+{
+	"$factory": "°maia/factory/context.factory.json",
+	"messages": {
+		"factory": "°maia/factory/event.factory.json",
+		"map": {
+			"id": "id",
+			"type": "type",
+			"processed": "processed",
+			"payload": "payload",
+			"fromRole": "$source.$label",
+			"toRole": "$target.$label",
+			"fromId": "$source.id",
+			"toId": "$target.id",
+			"recipient": "$target.$label",
+			"targetId": "$target.id"
+		}
+	},
+	"payloadLabel": "payload"
+}

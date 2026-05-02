@@ -1,6 +1,6 @@
 /**
  * Factories - Centralized factory definitions and validation for MaiaOS
- * M4: $label + $nanoid from identity-from-maia-path (canonical °maia/factory/*.factory.maia).
+ * M4: $label + $nanoid from identity-from-maia-path (canonical °maia/factory/*.factory.json).
  * Full factory set loads asynchronously — import `@MaiaOS/validation/factory-registry` for seed/bootstrap only.
  *
  * Export order: identity-from-maia-path and factory-registry before validation.engine. A top-level import of
@@ -8,7 +8,6 @@
  * identity-from-maia-path is still in TDZ (circular init).
  */
 
-export { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe/generated/registry.js'
 export {
 	annotateMaiaConfig,
 	cotextNanoidFromInstancePath,

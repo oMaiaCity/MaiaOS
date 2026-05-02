@@ -1,0 +1,8 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"context": "°maia/todos/intent/intent.context.json",
+	"view": "°maia/todos/intent/intent.view.json",
+	"process": "°maia/todos/intent/intent.process.json",
+	"brand": "°maia/brand/maiacity.style.json",
+	"inbox": "°maia/todos/intent/inbox.json"
+}

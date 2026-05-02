@@ -5,7 +5,7 @@
  * Serves the Bun-built SPA with proper routing
  */
 
-import { bootstrapNodeLogging, createLogger } from '@MaiaOS/aven-os/client'
+import { bootstrapNodeLogging, createLogger } from '@AvenOS/kernel/client'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'

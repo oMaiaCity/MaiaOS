@@ -51,7 +51,6 @@ export {
 	createFlowContext,
 	identitySelfAvenStep,
 	runSteps,
-	syncServerInfraSteps,
 } from '@MaiaOS/flows'
 export {
 	applyMaiaLoggingFromEnv,
@@ -86,8 +85,11 @@ export {
 	STORAGE_INSPECTOR_DEFAULT_TABLE_PAGE,
 	STORAGE_INSPECTOR_MAX_TABLE_PAGE,
 } from '@MaiaOS/storage'
-export { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
-export { maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
+
+export {
+	executableKeyFromMaiaPath,
+	maiaIdentity,
+} from '@MaiaOS/validation/identity-from-maia-path.js'
 export {
 	createErrorEntry,
 	createErrorResult,

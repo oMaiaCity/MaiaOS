@@ -1,0 +1,29 @@
+{
+	"name": "@AvenOS/universe",
+	"version": "26.4.212041-next",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./runner": "./src/avens/maia/runner.js",
+		"./orchestration": "./src/avens/maia/helpers/seed/seed.js",
+		"./helpers/*": "./src/avens/maia/helpers/*",
+		"./migrations/002-factories/generated.js": "./src/avens/maia/migrations/002-factories/generated.js",
+		"./migrations/004-actors/actors-registry-index.js": "./src/avens/maia/migrations/004-actors/actors-registry-index.js",
+		"./migrations/004-actors/functions/*": "./src/avens/maia/migrations/004-actors/functions/*"
+	},
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/logs": "workspace:*",
+		"@MaiaOS/peer": "workspace:*",
+		"@MaiaOS/validation": "workspace:*",
+		"@noble/hashes": "1.7.1",
+		"unicode-segmenter": "0.15.0"
+	},
+	"scripts": {
+		"test": "bun test tests/"
+	},
+	"files": [
+		"src"
+	]
+}

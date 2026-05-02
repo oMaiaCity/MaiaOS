@@ -12,7 +12,6 @@
 			"**/*.html",
 			"**/*.md",
 			"**/*.json",
-			"**/*.maia",
 			"!node_modules",
 			"!build",
 			"!dist",
@@ -23,7 +22,7 @@
 			"!.cursor",
 			"!.vscode",
 			"!.agents",
-			"!libs/aven-os/output"
+			"!libs/kernel/output"
 		]
 	},
 	"formatter": {
@@ -118,23 +117,6 @@
 			},
 			"linter": {
 				"enabled": false
-			}
-		},
-		{
-			"includes": ["**/*.maia"],
-			"formatter": {
-				"enabled": true
-			},
-			"linter": {
-				"enabled": false
-			},
-			"json": {
-				"formatter": {
-					"trailingCommas": "none"
-				},
-				"parser": {
-					"allowComments": true
-				}
 			}
 		}
 	]

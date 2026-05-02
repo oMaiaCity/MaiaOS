@@ -44,7 +44,7 @@ const globs = [
 	...[
 		'maia-brand',
 		'maia-db',
-		'aven-os',
+		'kernel',
 		'maia-validation',
 		'maia-game',
 		'maia-logs',
@@ -53,7 +53,7 @@ const globs = [
 		'maia-self',
 		'maia-storage',
 		'maia-ucan',
-		'maia-universe',
+		'universe',
 	].map((n) => join(repoRoot, 'libs', n, 'package.json')),
 ]
 

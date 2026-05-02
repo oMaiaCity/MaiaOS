@@ -1,0 +1,54 @@
+{
+	"$factory": "°maia/factory/process.factory.json",
+	"handlers": {
+		"TOGGLE_BUTTON": [
+			{
+				"tell": {
+					"target": "°maia/services/todos/actor.json",
+					"type": "TOGGLE_TODO",
+					"payload": {
+						"id": "$$id",
+						"done": "$$done"
+					}
+				}
+			}
+		],
+		"DELETE_BUTTON": [
+			{
+				"tell": {
+					"target": "°maia/services/todos/actor.json",
+					"type": "DELETE_TODO",
+					"payload": {
+						"id": "$$id"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message"
+				}
+			}
+		],
+		"RETRY": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		]
+	}
+}

@@ -377,7 +377,7 @@ export async function isFactoryCoValue(peer, coValueCore) {
 		const { content } = readHeaderAndContent(peer, coValueCore)
 		if (content && typeof content.get === 'function') {
 			const title = content.get('title')
-			if (title === '°maia/factory/meta.factory.maia') {
+			if (title === '°maia/factory/meta.factory.json') {
 				return true
 			}
 		}
@@ -397,7 +397,7 @@ export async function isFactoryCoValue(peer, coValueCore) {
 				const { content: referencedContent } = readHeaderAndContent(peer, referencedCoValueCore)
 				if (referencedContent && typeof referencedContent.get === 'function') {
 					const referencedTitle = referencedContent.get('title')
-					if (referencedTitle === '°maia/factory/meta.factory.maia') {
+					if (referencedTitle === '°maia/factory/meta.factory.json') {
 						return true
 					}
 				}

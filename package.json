@@ -23,20 +23,16 @@
 		"deploy:sync": "cd services/sync && ./deploy.sh",
 		"deploy:aven": "cd services/aven && ./deploy.sh",
 		"deploy:landing": "flyctl deploy --dockerfile services/landing/Dockerfile --config services/landing/fly.toml --app maia-city --wait-timeout 300 && flyctl scale count 1 --app maia-city --yes",
-		"universe:build": "cd libs/maia-universe && bun run build",
-		"distros:build": "cd libs/aven-os && bun run build",
+		"distros:build": "cd libs/kernel && bun run build",
 		"version:sync": "node scripts/sync-version.js",
 		"agent:generate": "bun libs/maia-self/scripts/generate-credentials.js",
-		"format": "bun run format:maia && bunx biome format --write .",
-		"format:maia": "bun scripts/format-maia.js",
-		"format:maia:check": "bun scripts/format-maia.js --check",
+		"format": "bunx biome format --write .",
 		"lint": "bunx biome lint .",
 		"check": "bunx biome check .",
 		"check:fix": "bunx biome check --write .",
-		"check:ci": "bun run format:maia:check && bun scripts/lint-import-invariants.mjs && bun scripts/lint-naming-invariants.mjs && bunx biome ci .",
-		"universe:registry": "bun scripts/generate-maia-universe-registry.mjs",
-		"universe:registry:watch": "bun scripts/generate-maia-universe-registry.mjs --watch",
-		"test": "bun run --workspaces --if-present test",
+		"check:ci": "bun scripts/lint-import-invariants.mjs && bun scripts/lint-naming-invariants.mjs && bunx biome ci .",
+		"migrate:registry": "bun scripts/generate-migrate-registries.mjs",
+		"test": "bun scripts/run-workspace-tests.mjs",
 		"test:db-contract": "bun --filter @MaiaOS/db test",
 		"sentrux:gui": "sentrux scan .",
 		"hyperframes:golden:lint": "cd experiments/hyperframes-golden-spiral && bunx hyperframes lint",
@@ -52,7 +48,6 @@
 		"lint-staged": "16.4.0"
 	},
 	"lint-staged": {
-		"*.{js,css,html,md,json}": "biome check --write --no-errors-on-unmatched",
-		"*.maia": "bun scripts/format-maia.js"
+		"*.{js,css,html,md,json}": "biome check --write --no-errors-on-unmatched"
 	}
 }

@@ -1,0 +1,352 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/view.factory.json",
+	"description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"$label": {
+			"$ref": "#/$defs/registryLabel"
+		},
+		"content": {
+			"type": "object",
+			"description": "View content structure (recursive viewNode)",
+			"$ref": "#/$defs/viewNode"
+		}
+	},
+	"$defs": {
+		"registryLabel": {
+			"type": "string",
+			"description": "Opaque human-readable registry path (typically equals pre-seed $id). Never ref-walked; never resolved as co-id. Native module path for getActor is derived at runtime from $label, not stored."
+		},
+		"viewNode": {
+			"type": "object",
+			"description": "Recursive DOM node structure",
+			"properties": {
+				"tag": {
+					"type": "string",
+					"enum": [
+						"",
+						"div",
+						"span",
+						"p",
+						"a",
+						"button",
+						"input",
+						"textarea",
+						"select",
+						"option",
+						"optgroup",
+						"form",
+						"label",
+						"fieldset",
+						"legend",
+						"img",
+						"picture",
+						"source",
+						"ul",
+						"ol",
+						"li",
+						"dl",
+						"dt",
+						"dd",
+						"table",
+						"thead",
+						"tbody",
+						"tfoot",
+						"tr",
+						"th",
+						"td",
+						"caption",
+						"colgroup",
+						"col",
+						"h1",
+						"h2",
+						"h3",
+						"h4",
+						"h5",
+						"h6",
+						"header",
+						"footer",
+						"main",
+						"nav",
+						"section",
+						"article",
+						"aside",
+						"details",
+						"summary",
+						"figure",
+						"figcaption",
+						"blockquote",
+						"pre",
+						"code",
+						"em",
+						"strong",
+						"small",
+						"sub",
+						"sup",
+						"mark",
+						"del",
+						"ins",
+						"abbr",
+						"time",
+						"progress",
+						"meter",
+						"output",
+						"dialog",
+						"hr",
+						"br",
+						"video",
+						"audio",
+						"canvas",
+						"svg",
+						"path",
+						"circle",
+						"rect",
+						"line",
+						"polyline",
+						"polygon",
+						"text",
+						"g",
+						"defs",
+						"use",
+						"symbol"
+					],
+					"description": "HTML element tag (allowlist for XSS prevention)"
+				},
+				"class": {
+					"type": "string"
+				},
+				"text": {
+					"anyOf": [
+						{
+							"type": "string",
+							"pattern": "^\\$\\$"
+						},
+						{
+							"type": "string",
+							"pattern": "^@"
+						},
+						{
+							"type": "string",
+							"pattern": "^\\$[^$]"
+						},
+						{
+							"type": "string"
+						},
+						{
+							"type": "number"
+						},
+						{
+							"type": "boolean"
+						},
+						{
+							"type": "null"
+						},
+						{
+							"$ref": "#/$defs/expressionValue"
+						}
+					]
+				},
+				"value": {
+					"anyOf": [
+						{
+							"type": "string",
+							"pattern": "^\\$\\$"
+						},
+						{
+							"type": "string",
+							"pattern": "^@"
+						},
+						{
+							"type": "string",
+							"pattern": "^\\$[^$]"
+						},
+						{
+							"type": "string"
+						},
+						{
+							"type": "number"
+						},
+						{
+							"type": "boolean"
+						},
+						{
+							"type": "null"
+						},
+						{
+							"$ref": "#/$defs/expressionValue"
+						}
+					]
+				},
+				"attrs": {
+					"type": "object",
+					"additionalProperties": {
+						"anyOf": [
+							{
+								"type": "string",
+								"pattern": "^\\$\\$"
+							},
+							{
+								"type": "string",
+								"pattern": "^@"
+							},
+							{
+								"type": "string",
+								"pattern": "^\\$[^$]"
+							},
+							{
+								"type": "string"
+							},
+							{
+								"type": "number"
+							},
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							},
+							{
+								"type": "object",
+								"additionalProperties": {
+									"anyOf": [
+										{
+											"type": "string",
+											"pattern": "^\\$\\$"
+										},
+										{
+											"type": "string",
+											"pattern": "^@"
+										},
+										{
+											"type": "string",
+											"pattern": "^\\$[^$]"
+										},
+										{
+											"type": "string"
+										},
+										{
+											"type": "number"
+										},
+										{
+											"type": "boolean"
+										},
+										{
+											"type": "null"
+										}
+									]
+								}
+							}
+						]
+					}
+				},
+				"children": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/viewNode"
+					}
+				},
+				"$on": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"properties": {
+							"send": {
+								"type": "string"
+							},
+							"payload": {
+								"type": "object",
+								"additionalProperties": true
+							},
+							"key": {
+								"type": "string"
+							}
+						},
+						"required": ["send"]
+					}
+				},
+				"$each": {
+					"type": "object",
+					"properties": {
+						"items": {
+							"anyOf": [
+								{
+									"type": "string",
+									"pattern": "^\\$\\$"
+								},
+								{
+									"type": "string",
+									"pattern": "^@"
+								},
+								{
+									"type": "string",
+									"pattern": "^\\$[^$]"
+								},
+								{
+									"type": "string"
+								},
+								{
+									"type": "number"
+								},
+								{
+									"type": "boolean"
+								},
+								{
+									"type": "null"
+								}
+							]
+						},
+						"template": {
+							"$ref": "#/$defs/viewNode"
+						}
+					},
+					"required": ["items", "template"]
+				},
+				"$slot": {
+					"anyOf": [
+						{
+							"type": "string",
+							"pattern": "^\\$\\$"
+						},
+						{
+							"type": "string",
+							"pattern": "^@"
+						},
+						{
+							"type": "string",
+							"pattern": "^\\$[^$]"
+						},
+						{
+							"type": "string"
+						},
+						{
+							"type": "number"
+						},
+						{
+							"type": "boolean"
+						},
+						{
+							"type": "null"
+						}
+					]
+				},
+				"scrollToBottomOn": {
+					"type": "string",
+					"description": "Context key (e.g. $conversations). When array length increases, scrolls this scroll container to bottom."
+				},
+				"format": {
+					"type": "string",
+					"enum": ["md", "markdown"],
+					"description": "When set with text, render as markdown (innerHTML) instead of plain text (textContent)."
+				}
+			},
+			"additionalProperties": false
+		},
+		"expressionValue": {
+			"type": "object",
+			"description": "MaiaScript expression (e.g. $join, $context)"
+		}
+	},
+	"additionalProperties": false
+}

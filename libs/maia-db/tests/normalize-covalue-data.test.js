@@ -6,7 +6,7 @@ describe('normalizeCoValueData', () => {
 		expect(
 			normalizeCoValueData({
 				foo: 1,
-				maiaPathKey: 'maia/services/paper/process.maia',
+				maiaPathKey: 'maia/services/paper/process.json',
 				nested: { maiaPathKey: 'x' },
 			}),
 		).toEqual({

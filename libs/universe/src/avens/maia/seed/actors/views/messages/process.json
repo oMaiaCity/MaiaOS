@@ -1,0 +1,83 @@
+{
+	"$factory": "°maia/factory/process.factory.json",
+	"handlers": {
+		"SEND_MESSAGE": [
+			{
+				"guard": {
+					"isLoading": false
+				}
+			},
+			{
+				"ctx": {
+					"isLoading": true,
+					"pendingInputText": "$$inputText"
+				}
+			},
+			{
+				"op": {
+					"create": {
+						"factory": "°maia/factory/chat.factory.json",
+						"data": {
+							"role": "user",
+							"content": "$$inputText",
+							"displayName": "me"
+						}
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "°maia/services/messages/actor.json",
+					"type": "SEND_MESSAGE",
+					"payload": {
+						"inputText": "$$inputText"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"op": {
+					"create": {
+						"factory": "°maia/factory/chat.factory.json",
+						"data": {
+							"role": "assistant",
+							"content": "$$result.content",
+							"displayName": "Maia"
+						}
+					}
+				}
+			},
+			{
+				"ctx": {
+					"isLoading": false,
+					"hasConversations": true,
+					"pendingInputText": null
+				}
+			},
+			{
+				"tell": {
+					"target": "$targetInfoCard",
+					"type": "DISMISS",
+					"payload": {}
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"isLoading": false
+				}
+			},
+			{
+				"tell": {
+					"target": "$targetInfoCard",
+					"type": "ERROR",
+					"payload": {
+						"errors": "$$errors"
+					}
+				}
+			}
+		]
+	}
+}

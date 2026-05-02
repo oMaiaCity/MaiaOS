@@ -1991,7 +1991,7 @@ async function isFactoryCoValue(peer, coValueCore) {
     const { content } = readHeaderAndContent(peer, coValueCore);
     if (content && typeof content.get === "function") {
       const title = content.get("title");
-      if (title === "°maia/factory/meta.factory.maia") {
+      if (title === "°maia/factory/meta.factory.json") {
         return true;
       }
     }
@@ -2010,7 +2010,7 @@ async function isFactoryCoValue(peer, coValueCore) {
         const { content: referencedContent } = readHeaderAndContent(peer, referencedCoValueCore);
         if (referencedContent && typeof referencedContent.get === "function") {
           const referencedTitle = referencedContent.get("title");
-          if (referencedTitle === "°maia/factory/meta.factory.maia") {
+          if (referencedTitle === "°maia/factory/meta.factory.json") {
             return true;
           }
         }
@@ -2459,8 +2459,35 @@ var init_deep_resolution = __esm(() => {
   init_collection_helpers();
 });
 
+// _cojson_src/infra-slot-manifest.js
+var INFRA_SLOTS;
+var init_infra_slot_manifest = __esm(() => {
+  INFRA_SLOTS = Object.freeze([
+    { slotKey: "metaFactoryCoId", basename: "meta.factory.json", infraKey: "meta" },
+    { slotKey: "actorFactoryCoId", basename: "actor.factory.json", infraKey: "actor" },
+    { slotKey: "eventFactoryCoId", basename: "event.factory.json", infraKey: "event" },
+    { slotKey: "cobinaryFactoryCoId", basename: "cobinary.factory.json", infraKey: "cobinary" },
+    { slotKey: "identityFactoryCoId", basename: "identity.factory.json", infraKey: "identity" },
+    {
+      slotKey: "indexesRegistryFactoryCoId",
+      basename: "indexes-registry.factory.json",
+      infraKey: "indexesRegistry"
+    },
+    { slotKey: "capabilityFactoryCoId", basename: "capability.factory.json", infraKey: "capability" },
+    { slotKey: "groupsFactoryCoId", basename: "groups.factory.json", infraKey: "groups" },
+    { slotKey: "osRegistryFactoryCoId", basename: "os-registry.factory.json", infraKey: "osRegistry" },
+    {
+      slotKey: "vibesRegistryFactoryCoId",
+      basename: "vibes-registry.factory.json",
+      infraKey: "vibesRegistry"
+    },
+    { slotKey: "dataSparkFactoryCoId", basename: "spark.factory.json", infraKey: "dataSpark" }
+  ]);
+});
+
 // _cojson_src/crud/read-helpers.js
 import { createLogger as createLogger5 } from "@MaiaOS/logs";
+import { maiaIdentity } from "@MaiaOS/validation";
 
 async function resolveSchemaLazy(peer, identifier, options) {
   const { resolve: resolve2 } = await Promise.resolve().then(() => (init_authoring_resolver(), exports_authoring_resolver));
@@ -2545,8 +2572,52 @@ function getMapDependencyCoIds(rawData, mapConfig) {
   }
   return deps;
 }
+function factoryBasenameFromSchemaTitle(title) {
+  if (typeof title !== "string")
+    return null;
+  const leaf = title.includes("/") ? title.split("/").pop() : title.trim();
+  return leaf?.endsWith(".factory.json") ? leaf : null;
+}
+async function alignQueryFactoryCoIdWithSparkOsInfra(peer, factoryCoId, universalRead, timeoutMs = 5000) {
+  if (!factoryCoId?.startsWith?.("co_z") || !peer?.infra || typeof universalRead !== "function") {
+    return factoryCoId;
+  }
+  for (const { infraKey } of INFRA_SLOTS) {
+    const canonical2 = peer.infra[infraKey];
+    if (canonical2?.startsWith?.("co_z") && factoryCoId === canonical2)
+      return factoryCoId;
+  }
+  let slotBasename = null;
+  try {
+    const store = await universalRead(peer, factoryCoId, null, null, {
+      deepResolve: false,
+      timeoutMs
+    });
+    await waitForStoreReady(store, factoryCoId, Math.min(timeoutMs, 3000));
+    const data = store?.value;
+    slotBasename = factoryBasenameFromSchemaTitle(data?.title);
+    if (!slotBasename && typeof data?.$nanoid === "string" && data.$nanoid.length > 0) {
+      for (const { basename } of INFRA_SLOTS) {
+        if (data.$nanoid === maiaIdentity(basename).$nanoid) {
+          slotBasename = basename;
+          break;
+        }
+      }
+    }
+  } catch {
+    return factoryCoId;
+  }
+  if (!slotBasename)
+    return factoryCoId;
+  const slot = INFRA_SLOTS.find((s) => s.basename === slotBasename);
+  const canonical = slot ? peer.infra[slot.infraKey] : null;
+  if (canonical?.startsWith?.("co_z") && factoryCoId !== canonical)
+    return canonical;
+  return factoryCoId;
+}
 var log5;
 var init_read_helpers = __esm(() => {
+  init_infra_slot_manifest();
   log5 = createLogger5("maia-db");
 });
 
@@ -3186,6 +3257,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
             if (!factoryCoId.startsWith("co_z"))
               continue;
           }
+          factoryCoId = await alignQueryFactoryCoIdWithSparkOsInfra(peer, factoryCoId, universalRead, timeoutMs);
           if (factoryCoId && typeof factoryCoId === "string" && factoryCoId.startsWith("co_z")) {
             if (filterChanged || !existingStore) {
               if (existingStore?._queryUnsubscribe) {
@@ -3564,11 +3636,14 @@ async function read(peer, coId = null, schema = null, filter = null, schemaHint 
   }
   if (schema) {
     const sparkSchemaCoId = peer.infra?.dataSpark;
-    const resolvedSchema = typeof schema === "string" && schema.startsWith("co_z") ? schema : await resolveSchemaLazy(peer, schema, { returnType: "coId" });
+    let resolvedSchema = typeof schema === "string" && schema.startsWith("co_z") ? schema : await resolveSchemaLazy(peer, schema, { returnType: "coId" });
+    if (typeof resolvedSchema === "string" && resolvedSchema.startsWith("co_z")) {
+      resolvedSchema = await alignQueryFactoryCoIdWithSparkOsInfra(peer, resolvedSchema, readOptions.universalRead, timeoutMs);
+    }
     if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
       return readSparksFromAccount(peer, readOptions);
     }
-    return readCollection(peer, schema, filter, readOptions);
+    return readCollection(peer, resolvedSchema, filter, readOptions);
   }
   return readAllCoValues(peer, filter, { deepResolve, maxDepth, timeoutMs });
 }
@@ -4331,12 +4406,6 @@ async function maiaDbGetRawRecord(db, id) {
     return null;
   return data;
 }
-async function maiaDbSeed(db, configs, schemas, data, options = {}) {
-  if (!db.account)
-    throw new Error("[MaiaDB] Account required for seed");
-  const { seed: runSeed } = await import("@MaiaOS/seed/orchestration");
-  return await runSeed(db.account, db.node, configs, schemas, data || {}, db, options);
-}
 async function maiaDbResolve(db, identifier, opts = {}) {
   return resolve(db, identifier, opts);
 }
@@ -4702,9 +4771,6 @@ class MaiaDB {
   async getRawRecord(id) {
     return maiaDbGetRawRecord(this, id);
   }
-  async seed(configs, schemas, data, options = {}) {
-    return maiaDbSeed(this, configs, schemas, data, options);
-  }
   async ensureAccountOsReady(options = {}) {
     return maiaDbEnsureAccountOsReady(this, options);
   }
@@ -4735,13 +4801,14 @@ class MaiaDB {
 }
 
 // cojson-bundle-entry.js
+init_coBinary();
 init_coList();
 init_coMap();
 init_coStream();
-init_coBinary();
 init_create_covalue_for_spark();
 init_collection_helpers();
 init_create();
+init_deep_resolution();
 init_delete();
 init_map_transform();
 init_message_helpers();
@@ -4753,36 +4820,11 @@ init_read_collection();
 init_read_helpers();
 init_read_single_and_sparks();
 init_update();
-init_deep_resolution();
 init_authoring_resolver();
 
 // _cojson_src/factory/infra-from-spark-os.js
 init_collection_helpers();
-
-// _cojson_src/infra-slot-manifest.js
-var INFRA_SLOTS = Object.freeze([
-  { slotKey: "metaFactoryCoId", basename: "meta.factory.maia", infraKey: "meta" },
-  { slotKey: "actorFactoryCoId", basename: "actor.factory.maia", infraKey: "actor" },
-  { slotKey: "eventFactoryCoId", basename: "event.factory.maia", infraKey: "event" },
-  { slotKey: "cobinaryFactoryCoId", basename: "cobinary.factory.maia", infraKey: "cobinary" },
-  { slotKey: "identityFactoryCoId", basename: "identity.factory.maia", infraKey: "identity" },
-  {
-    slotKey: "indexesRegistryFactoryCoId",
-    basename: "indexes-registry.factory.maia",
-    infraKey: "indexesRegistry"
-  },
-  { slotKey: "capabilityFactoryCoId", basename: "capability.factory.maia", infraKey: "capability" },
-  { slotKey: "groupsFactoryCoId", basename: "groups.factory.maia", infraKey: "groups" },
-  { slotKey: "osRegistryFactoryCoId", basename: "os-registry.factory.maia", infraKey: "osRegistry" },
-  {
-    slotKey: "vibesRegistryFactoryCoId",
-    basename: "vibes-registry.factory.maia",
-    infraKey: "vibesRegistry"
-  },
-  { slotKey: "dataSparkFactoryCoId", basename: "spark.factory.maia", infraKey: "dataSpark" }
-]);
-
-// _cojson_src/factory/infra-from-spark-os.js
+init_infra_slot_manifest();
 async function loadInfraFromSparkOs(peer, osId, options = {}) {
   const { timeoutMs = 5000 } = options;
   if (!osId?.startsWith?.("co_z")) {
@@ -5385,6 +5427,7 @@ async function rebuildAllIndexes(peer) {
 // cojson-bundle-entry.js
 init_factory_index_schema();
 init_factory_index_warm_load();
+init_infra_slot_manifest();
 
 // _cojson_src/registry/ensure-identity.js
 init_collection_helpers();
@@ -5578,6 +5621,7 @@ async function loadContextStore(dataEngine, ref, options = {}) {
 export {
   accountHasCapabilityOnPeer,
   addGroupMember,
+  alignQueryFactoryCoIdWithSparkOsInfra,
   appendFactoryDefinitionToCatalog,
   applyMapTransform,
   applyMapTransformToArray,
@@ -5677,7 +5721,6 @@ export {
   maiaDbResolve,
   maiaDbResolveReactive,
   maiaDbResolveSystemSparkCoId,
-  maiaDbSeed,
   maiaDbSetGroupMemberRole,
   maiaDbUpdate,
   maiaDbUpdateSpark,

@@ -1,0 +1,22 @@
+{
+	"$factory": "°maia/factory/vibe.factory.json",
+	"name": "Todos",
+	"description": "Complete todo list with state machines and AI tools",
+	"icon": "°maia/data/icons.data.json[k68km7zEav76]",
+	"actor": "°maia/todos/intent/intent.actor.json",
+	"runtime": ["browser"],
+	"seedData": {
+		"todos": {
+			"kind": "seedDataField",
+			"field": ["todos"]
+		}
+	},
+	"dependencies": [
+		"°maia/todos/intent/intent.actor.json",
+		"°maia/views/tabs/todos.actor.json",
+		"°maia/views/list/actor.json",
+		"°maia/services/todos/actor.json",
+		"°maia/views/placeholder/actor.json",
+		"°maia/services/db/actor.json"
+	]
+}

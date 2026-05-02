@@ -1,0 +1,42 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/services/update-wasm-code/interface.json",
+	"description": "Updates CoText content for wasm.code (inline edit). Resolves actor co-id → wasm config → code CoText.",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"UPDATE_WASM_CODE": {
+			"type": "object",
+			"description": "Update wasm code CoText (full replace). codeCoId or actorRef required.",
+			"properties": {
+				"actorRef": {
+					"type": "string",
+					"description": "Actor ref (e.g. °maia/services/sandboxed-add/actor.json)"
+				},
+				"value": {
+					"type": "string",
+					"description": "New code content (will be split into graphemes)"
+				},
+				"codeCoId": {
+					"type": "string",
+					"description": "CoText co-id (when provided, actorCoId is ignored)"
+				}
+			},
+			"required": ["value"],
+			"additionalProperties": false
+		},
+		"GET_WASM_CODE": {
+			"type": "object",
+			"description": "Get live wasm code from CoText",
+			"properties": {
+				"actorCoId": {
+					"type": "string",
+					"description": "Actor instance co_z"
+				}
+			},
+			"required": ["actorCoId"],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

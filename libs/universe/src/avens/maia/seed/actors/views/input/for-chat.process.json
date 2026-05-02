@@ -1,0 +1,28 @@
+{
+	"$factory": "°maia/factory/process.factory.json",
+	"handlers": {
+		"UPDATE_INPUT": [
+			{
+				"ctx": {
+					"inputValue": "$$value"
+				}
+			}
+		],
+		"FORM_SUBMIT": [
+			{
+				"ctx": {
+					"inputValue": ""
+				}
+			},
+			{
+				"tell": {
+					"target": "$targetActor",
+					"type": "SEND_MESSAGE",
+					"payload": {
+						"inputText": "$$value"
+					}
+				}
+			}
+		]
+	}
+}

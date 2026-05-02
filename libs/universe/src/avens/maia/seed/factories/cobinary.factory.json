@@ -1,0 +1,18 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/cobinary.factory.json",
+	"cotype": "cobinary",
+	"indexing": false,
+	"properties": {
+		"mimeType": {
+			"type": "string",
+			"description": "MIME type of the file (e.g. application/pdf, image/png)"
+		},
+		"totalSizeBytes": {
+			"type": "integer",
+			"minimum": 0,
+			"description": "Total file size in bytes"
+		}
+	},
+	"required": ["mimeType"]
+}

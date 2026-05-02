@@ -5,11 +5,12 @@
 	"private": true,
 	"scripts": {
 		"dev": "bun run --env-file=../../.env src/index.js",
-		"start": "bun run --env-file=../../.env ../../libs/aven-os/output/aven-server.mjs",
+		"start": "bun run --env-file=../../.env ../../libs/kernel/output/aven-server.mjs",
 		"deploy": "./deploy.sh",
 		"test": "bun test tests"
 	},
 	"dependencies": {
-		"@MaiaOS/aven-os": "workspace:*"
+		"@AvenOS/kernel": "workspace:*",
+		"@MaiaOS/flows": "workspace:*"
 	}
 }

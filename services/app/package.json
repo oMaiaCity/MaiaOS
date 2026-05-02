@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/game": "workspace:*",
-		"@MaiaOS/aven-os": "workspace:*",
+		"@AvenOS/kernel": "workspace:*",
 		"@tauri-apps/api": "2.10.1"
 	},
 	"devDependencies": {

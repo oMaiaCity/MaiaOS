@@ -1,0 +1,34 @@
+{
+	"$factory": "°maia/factory/context.factory.json",
+	"notes": {
+		"factory": "°maia/factory/note.factory.json",
+		"options": {
+			"map": {
+				"id": "id",
+				"title": "title",
+				"content": "$content"
+			}
+		}
+	},
+	"selectedNoteId": null,
+	"selectedNoteIds": {},
+	"selectedNote": {
+		"factory": "°maia/factory/note.factory.json",
+		"options": {
+			"filter": {
+				"id": "$selectedNoteId"
+			},
+			"map": {
+				"id": "id",
+				"title": "title",
+				"content": "$content"
+			}
+		}
+	},
+	"paper": "@paper",
+	"paperService": "@paperService",
+	"@actors": {
+		"paper": "°maia/views/paper/actor.json",
+		"paperService": "°maia/services/paper/actor.json"
+	}
+}

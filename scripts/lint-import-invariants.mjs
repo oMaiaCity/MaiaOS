@@ -54,7 +54,7 @@ for (const file of appJs) {
 	for (const spec of importsInFile(file)) {
 		if (!spec.startsWith('@MaiaOS/')) continue
 		const ok =
-			spec.startsWith('@MaiaOS/aven-os/client') || spec.startsWith('@MaiaOS/game')
+			spec.startsWith('@AvenOS/kernel/client') || spec.startsWith('@MaiaOS/game')
 		if (!ok) {
 			fail(`[services/app] disallowed import:\n  ${rel(file)}\n  ${spec}`)
 		}
@@ -64,7 +64,9 @@ for (const file of appJs) {
 for (const file of syncJs) {
 	for (const spec of importsInFile(file)) {
 		if (!spec.startsWith('@MaiaOS/')) continue
-		if (!spec.startsWith('@MaiaOS/aven-os/server')) {
+		const ok =
+			spec.startsWith('@AvenOS/kernel/server') || spec.startsWith('@MaiaOS/flows/catalog/')
+		if (!ok) {
 			fail(`[services/sync] disallowed import:\n  ${rel(file)}\n  ${spec}`)
 		}
 	}

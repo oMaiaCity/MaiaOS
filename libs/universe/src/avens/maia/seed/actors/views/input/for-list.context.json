@@ -1,0 +1,11 @@
+{
+	"$factory": "°maia/factory/context.factory.json",
+	"inputPlaceholder": "Add a new todo...",
+	"inputValue": "",
+	"submitButtonText": "Add",
+	"hasError": false,
+	"error": null,
+	"isLoading": false,
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss"
+}

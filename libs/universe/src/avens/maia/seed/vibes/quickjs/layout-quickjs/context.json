@@ -1,0 +1,48 @@
+{
+	"$factory": "°maia/factory/context.factory.json",
+	"title": "Vibe Creator",
+	"tabs": [
+		{
+			"id": "quickjs",
+			"label": "quickjs",
+			"actor": "@addForm"
+		},
+		{
+			"id": "code",
+			"label": "code",
+			"actor": "@depsList"
+		},
+		{
+			"id": "logs",
+			"label": "logs",
+			"actor": "@logsView"
+		}
+	],
+	"viewMode": "quickjs",
+	"currentView": "@addForm",
+	"tabsWithActive": [
+		{
+			"id": "quickjs",
+			"label": "quickjs",
+			"actor": "@addForm",
+			"isActive": true
+		},
+		{
+			"id": "code",
+			"label": "code",
+			"actor": "@depsList",
+			"isActive": false
+		},
+		{
+			"id": "logs",
+			"label": "logs",
+			"actor": "@logsView",
+			"isActive": false
+		}
+	],
+	"@actors": {
+		"addForm": "°maia/quickjs/add-form/actor.json",
+		"depsList": "°maia/quickjs/deps-list/actor.json",
+		"logsView": "°maia/views/logs/actor.json"
+	}
+}

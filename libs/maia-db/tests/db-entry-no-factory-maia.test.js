@@ -1,6 +1,6 @@
 /**
- * Guard: default @MaiaOS/db surface must not import *.factory.maia / co-types.defs.maia
- * (CoValue SSOT in browser; authoring stays in universe on disk).
+ * Guard: default @MaiaOS/db surface must not import *.factory.json / co-types.defs.json
+ * (CoValue SSOT in browser; authoring stays in migrate sparks on disk).
  */
 
 import { describe, expect, test } from 'bun:test'
@@ -18,12 +18,14 @@ const filesMustNotReferenceMaiaImports = [
 	'src/_cojson_src/cotypes/coList.js',
 ]
 
-describe('@MaiaOS/db public graph — no universe .maia imports', () => {
+describe('@MaiaOS/db public graph — no direct @AvenOS/universe sparks .json imports', () => {
 	for (const rel of filesMustNotReferenceMaiaImports) {
 		test(rel, () => {
 			const text = readFileSync(join(pkgRoot, rel), 'utf8')
-			expect(text).not.toMatch(/from ['"]@MaiaOS\/universe\/[^'"]*\.maia['"]/)
-			expect(text).not.toMatch(/import\(['"]@MaiaOS\/universe\/[^'"]*\.maia['"]/)
+			expect(text).not.toMatch(/from ['"]@MaiaOS\/universe\/[^'"]+\.json['"]/)
+			expect(text).not.toMatch(/import\(['"]@MaiaOS\/universe\/[^'"]+\.json['"]/)
+			expect(text).not.toMatch(/from ['"]@AvenOS\/migrate\/[^'"]+\.json['"]/)
+			expect(text).not.toMatch(/import\(['"]@AvenOS\/migrate\/[^'"]+\.json['"]/)
 		})
 	}
 })

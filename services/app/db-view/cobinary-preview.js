@@ -1,7 +1,7 @@
 /**
  * CoBinary image preview hydration (post-render).
  */
-import { debugLog, debugWarn } from '@MaiaOS/aven-os/client'
+import { debugLog, debugWarn } from '@AvenOS/kernel/client'
 
 const cobinaryPreviewCache = new Map()
 

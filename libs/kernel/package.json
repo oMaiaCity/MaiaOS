@@ -1,0 +1,26 @@
+{
+	"name": "@AvenOS/kernel",
+	"version": "26.4.212041-next",
+	"type": "module",
+	"private": true,
+	"exports": {
+		"./client": "./client/index.js",
+		"./server": "./server/index.js"
+	},
+	"files": [
+		"output"
+	],
+	"dependencies": {
+		"@MaiaOS/logs": "workspace:*",
+		"@electric-sql/pglite": "0.4.2",
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/engine": "workspace:*",
+		"@MaiaOS/self": "workspace:*",
+		"@MaiaOS/storage": "workspace:*",
+		"@MaiaOS/validation": "workspace:*"
+	},
+	"scripts": {
+		"build": "bun scripts/build.js",
+		"build:vendor-pglite": "node scripts/vendor-pglite.js"
+	}
+}

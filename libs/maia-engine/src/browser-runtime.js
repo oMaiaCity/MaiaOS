@@ -2,7 +2,7 @@
  * Runtime (browser) - Manages actor lifecycles, inbox watching, getActorConfig
  *
  * Loads ALL config from CoJSON DB dynamically (avens, dependencies, actor configs).
- * No hardcoded .maia configs — runtime reads account → spark.avens → aven deps → actor refs.
+ * No hardcoded universe JSON configs — runtime reads account → spark.avens → aven deps → actor refs.
  * For each dependency: when inbox has unprocessed messages, spawns headless actor.
  */
 

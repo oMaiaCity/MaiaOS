@@ -1,0 +1,45 @@
+{
+	"$factory": "°maia/factory/meta.factory.json",
+	"title": "°maia/factory/capability.factory.json",
+	"description": "Single capability grant. sub×cmd×pol. Instances are listed in spark.os.indexes[Capability schema co-id] (schema index CoList).",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"sub": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Subject (account co-id)"
+		},
+		"cmd": {
+			"type": "string",
+			"pattern": "^/[a-z0-9/]*$",
+			"description": "UCAN Command (e.g. /llm/chat)"
+		},
+		"pol": {
+			"type": "array",
+			"description": "UCAN Policy; [] for no constraints"
+		},
+		"exp": {
+			"type": "integer",
+			"description": "Expiry Unix seconds"
+		},
+		"iss": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Issuer (optional)"
+		},
+		"nbf": {
+			"type": "integer",
+			"description": "Not before (optional)"
+		},
+		"nonce": {
+			"type": "string",
+			"description": "Uniqueness (optional)"
+		},
+		"meta": {
+			"type": "object",
+			"description": "Extensions (optional)"
+		}
+	},
+	"required": ["sub", "cmd", "pol", "exp"]
+}

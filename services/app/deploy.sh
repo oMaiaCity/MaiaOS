@@ -20,10 +20,6 @@ retry_flyctl_deploy() {
   while [ $retry_count -lt $max_retries ]; do
     echo "Attempt $((retry_count + 1))/$max_retries: Deploying $app_name..."
     
-    # VITE_SEED_VIBES defaults to "all" in build (seeds all vibes)
-    # To override, pass --build-arg VITE_SEED_VIBES="todos,chat" manually
-    echo "   Using VITE_SEED_VIBES=all (default - seeds all vibes)"
-    
     # Run deploy - explicit build args ensure VITE_PEER_SYNC_HOST is in bundle (sync domain)
     flyctl deploy \
       --dockerfile "$dockerfile" \

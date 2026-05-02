@@ -4,14 +4,11 @@
 			"@MaiaOS/db": ["./libs/maia-db/src/index.js"],
 			"@MaiaOS/engine": ["./libs/maia-engine/src/index.js"],
 			"@MaiaOS/engine/*": ["./libs/maia-engine/src/*"],
-			"@MaiaOS/aven-os/client": ["./libs/aven-os/client/index.js"],
-			"@MaiaOS/aven-os/server": ["./libs/aven-os/server/index.js"],
+			"@AvenOS/kernel/client": ["./libs/kernel/client/index.js"],
+			"@AvenOS/kernel/server": ["./libs/kernel/server/index.js"],
 			"@MaiaOS/validation": ["./libs/maia-validation/src"],
 			"@MaiaOS/validation/*": ["./libs/maia-validation/src/*"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
-			"@MaiaOS/universe": ["./libs/maia-universe/src"],
-			"@MaiaOS/universe/*": ["./libs/maia-universe/src/*"],
-			"@MaiaOS/seed": ["./libs/maia-seed/src"],
 			"@MaiaOS/flows": ["./libs/maia-flows/src/index.js"]
 		}
 	}

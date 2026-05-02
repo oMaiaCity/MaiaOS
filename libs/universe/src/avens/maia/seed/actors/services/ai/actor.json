@@ -1,0 +1,5 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"interface": "°maia/services/ai/interface.json",
+	"process": "°maia/services/ai/process.json"
+}

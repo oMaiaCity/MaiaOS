@@ -1,0 +1,8 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"context": "°maia/views/profile-image/context.json",
+	"view": "°maia/views/profile-image/view.json",
+	"process": "°maia/views/profile-image/process.json",
+	"interface": "°maia/views/profile-image/interface.json",
+	"style": "°maia/views/profile-image/style.json"
+}

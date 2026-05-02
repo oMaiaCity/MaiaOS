@@ -3,7 +3,7 @@ import {
 	bootstrapIdentitySteps,
 	createFlowContext,
 	runSteps,
-} from '@MaiaOS/aven-os/server'
+} from '@AvenOS/kernel/server'
 
 /**
  * POST /bootstrap — unified one-shot handshake for new/returning humans.
@@ -18,7 +18,6 @@ export async function handleBootstrap(
 		accountID,
 		avenMaiaGuardian,
 		peerSyncSeed,
-		seedVibesConfig,
 	},
 	worker,
 	body,
@@ -46,7 +45,6 @@ export async function handleBootstrap(
 				serverAccountId: accountID,
 				guardianAccountId: avenMaiaGuardian,
 				maiaName: _mn,
-				seedVibes: seedVibesConfig,
 			},
 			allowApply: peerSyncSeed,
 			bootstrap: { accountId, profileId },

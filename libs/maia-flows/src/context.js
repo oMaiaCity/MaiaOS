@@ -34,7 +34,7 @@ function normalizeFlowLog(raw) {
  * @typedef {Object} FlowContext
  * @property {FlowWorker} worker
  * @property {FlowLog} log
- * @property {{ serverAccountId: string, guardianAccountId: string | null, maiaName: string, seedVibes: string }} env
+ * @property {{ serverAccountId: string, guardianAccountId: string | null, maiaName: string }} env
  * @property {{ allowApply: boolean }} policy
  * @property {{ accountId?: string, profileId?: string }} [bootstrap]
  */
@@ -43,7 +43,7 @@ function normalizeFlowLog(raw) {
  * @param {Object} p
  * @param {FlowWorker} p.worker
  * @param {FlowLog | { log?: Function, info?: Function, warn?: Function, error?: Function }} p.log
- * @param {{ serverAccountId: string, guardianAccountId: string | null, maiaName: string, seedVibes: string }} p.env
+ * @param {{ serverAccountId: string, guardianAccountId: string | null, maiaName: string }} p.env
  * @param {boolean} p.allowApply
  * @param {{ accountId?: string, profileId?: string }} [p.bootstrap]
  * @returns {FlowContext}

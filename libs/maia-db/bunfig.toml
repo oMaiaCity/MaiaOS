@@ -1,3 +1,0 @@
-# Match repo root — .maia must load as JSON for @MaiaOS/universe/factories imports
-[loader]
-".maia" = "json"

@@ -1,0 +1,6 @@
+{
+	"id": "001-genesis",
+	"title": "Structural scaffold (sparks registry, °maia spark.os, meta-factory shell, catalogs, nanoid index)",
+	"enabled": true,
+	"requires": []
+}

@@ -1,0 +1,18 @@
+{
+	"$factory": "°maia/factory/context.factory.json",
+	"list": {
+		"factory": "°maia/factory/todo.factory.json",
+		"map": {
+			"id": "id",
+			"text": "text",
+			"done": "done"
+		}
+	},
+	"inputActor": "@input",
+	"toggleButtonText": "✓",
+	"deleteButtonText": "✕",
+	"error": null,
+	"@actors": {
+		"input": "°maia/views/input/for-list.actor.json"
+	}
+}

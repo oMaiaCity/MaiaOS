@@ -2,9 +2,9 @@
  * Chat vibe / session actor resolution — no @MaiaOS/runtime (avoids flows barrel on dashboard import path).
  */
 
-import { maiaIdentity } from '@MaiaOS/aven-os/client'
+import { maiaIdentity } from '@AvenOS/kernel/client'
 
-const CHAT_INTENT_ACTOR_NANOID = maiaIdentity('chat/intent/intent.actor.maia').$nanoid
+const CHAT_INTENT_ACTOR_NANOID = maiaIdentity('chat/intent/intent.actor.json').$nanoid
 
 function actorConfigMatchesChatIntent(cfg) {
 	if (!cfg || typeof cfg !== 'object') return false

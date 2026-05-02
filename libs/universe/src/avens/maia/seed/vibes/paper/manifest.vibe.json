@@ -1,0 +1,19 @@
+{
+	"$factory": "°maia/factory/vibe.factory.json",
+	"name": "Paper",
+	"description": "Docs / Notes - collaborative notes",
+	"icon": "°maia/data/icons.data.json[OFsal1JHWA0t]",
+	"actor": "°maia/views/layout-paper/actor.json",
+	"runtime": ["browser"],
+	"seedData": {
+		"notes": {
+			"kind": "seedDataField",
+			"field": ["notes"]
+		}
+	},
+	"dependencies": [
+		"°maia/views/layout-paper/actor.json",
+		"°maia/views/paper/actor.json",
+		"°maia/services/paper/actor.json"
+	]
+}

@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"type": "service",
+	"process": "°maia/humans/intent/intent.process.json",
+	"view": "°maia/humans/intent/intent.view.json",
+	"context": "°maia/humans/intent/intent.context.json",
+	"brand": "°maia/brand/maiacity.style.json",
+	"inbox": "°maia/humans/intent/inbox.json",
+	"interface": ["DISMISS"]
+}

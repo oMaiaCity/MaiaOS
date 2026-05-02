@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/actor.factory.json",
+	"context": "°maia/views/info-card/context.json",
+	"view": "°maia/views/info-card/view.json",
+	"process": "°maia/views/info-card/process.json",
+	"brand": "°maia/brand/maiacity.style.json",
+	"style": "°maia/views/info-card/style.json",
+	"inbox": "°maia/views/info-card/inbox.json",
+	"interface": "°maia/views/info-card/interface.json"
+}
